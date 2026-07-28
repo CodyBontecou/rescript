@@ -46,7 +46,7 @@ export default function Editor() {
     })();
   }, [videoFile, skipTranscription, transcribe]);
 
-  // Global shortcuts: space = play/pause, ⌘Z / ⇧⌘Z = undo / redo.
+  // Global shortcuts: space = play/pause, ⌘Z / ⇧⌘Z = undo / redo, S = split.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -61,6 +61,16 @@ export default function Editor() {
         e.preventDefault();
         if (e.shiftKey) s.redo();
         else s.undo();
+      } else if (
+        e.key.toLowerCase() === "s" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        s.status === "ready" &&
+        !s.exportOpen
+      ) {
+        e.preventDefault();
+        s.splitAtPlayhead();
       }
     };
     document.addEventListener("keydown", handler);

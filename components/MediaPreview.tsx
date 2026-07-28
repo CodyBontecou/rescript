@@ -16,6 +16,7 @@ export default function MediaPreview() {
   const videoFile = useEditorStore((s) => s.videoFile);
   const mediaKind = useEditorStore((s) => s.mediaKind);
   const words = useEditorStore((s) => s.words);
+  const manualCuts = useEditorStore((s) => s.manualCuts);
   const duration = useEditorStore((s) => s.duration);
   const playing = useEditorStore((s) => s.playing);
   const currentTime = useEditorStore((s) => s.currentTime);
@@ -26,7 +27,10 @@ export default function MediaPreview() {
 
   const mediaRef = useRef<HTMLMediaElement | null>(null);
   const isAudio = mediaKind === "audio";
-  const cuts = useMemo(() => getCutRanges(words, duration), [words, duration]);
+  const cuts = useMemo(
+    () => getCutRanges(words, duration, manualCuts),
+    [words, duration, manualCuts]
+  );
   const cutsRef = useRef(cuts);
   useEffect(() => {
     cutsRef.current = cuts;

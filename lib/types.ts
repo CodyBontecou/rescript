@@ -19,6 +19,41 @@ export interface TimeRange {
   end: number;
 }
 
+/**
+ * A user-placed cut that is not owned by a deleted word.
+ * Used for blade/trim edits after splitting clips.
+ */
+export interface ManualCut {
+  id: number;
+  start: number;
+  end: number;
+}
+
+/**
+ * A structural split point in original media time.
+ * Subdivides keep ranges into independently selectable clips (Descript-style scenes).
+ */
+export interface SceneBoundary {
+  id: number;
+  time: number;
+}
+
+/** Snapshot of all edit state for undo/redo. */
+export interface EditSnapshot {
+  words: Word[];
+  manualCuts: ManualCut[];
+  sceneBoundaries: SceneBoundary[];
+}
+
+/** A contiguous kept segment of media, optionally subdivided by scene boundaries. */
+export interface ClipSegment {
+  /** Stable key for React / selection (`start` fixed at creation is not stable after trim). */
+  id: string;
+  start: number;
+  end: number;
+  index: number;
+}
+
 /** Consecutive words spoken by the same speaker (derived for rendering). */
 export interface SpeakerTurn {
   speaker: number;

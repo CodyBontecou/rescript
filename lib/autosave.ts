@@ -64,6 +64,8 @@ async function writeSnapshot() {
       model: s.model,
       words: s.words,
       showDeleted: s.showDeleted,
+      manualCuts: s.manualCuts,
+      sceneBoundaries: s.sceneBoundaries,
       media: s.videoFile,
       mediaType: s.videoFile.type,
       createdAt,
