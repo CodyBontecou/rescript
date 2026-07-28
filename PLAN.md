@@ -96,14 +96,14 @@ Everything else is derived:
 5. ✅ Editing core: word selection → cut/restore, undo/redo, playback that
    skips cuts, show/hide deleted words.
 6. ✅ Export: keep-range concat render to MP4 with progress, download.
+7. ✅ Flexible timeline editing: word-boundary drag, Split at playhead
+   (scene boundaries), clip trim handles, manual cuts merged into export.
 
 ## Future work
 
-- Correct/retype words (text overrides for captions), speaker renaming.
-- Filler-word detection ("um", "uh") with one-click removal.
 - Larger Whisper variants + language selection UI; local model import for
   air-gapped first runs.
 - Smarter export: stream-copy for keyframe-aligned segments, WebCodecs-based
   rendering for speed.
-- Multi-clip projects, captions burn-in, audio-only export.
-- Persist projects to IndexedDB / OPFS so refreshes keep edits.
+- Multi-clip projects (reorder scenes), captions burn-in.
+- Gap clips / insert silence between words.

@@ -9,7 +9,7 @@
 import type { ModelChoice } from "./models";
 import { isModelChoice } from "./models";
 import type { MediaKind } from "./media";
-import type { Word } from "./types";
+import type { ManualCut, SceneBoundary, Word } from "./types";
 
 const DB_NAME = "rescript-projects";
 const DB_VERSION = 1;
@@ -29,6 +29,10 @@ export interface ProjectMeta {
 export interface ProjectRecord extends ProjectMeta {
   words: Word[];
   showDeleted: boolean;
+  /** Blade/trim cuts not owned by deleted words (optional for older saves). */
+  manualCuts?: ManualCut[];
+  /** Scene split points in original media time (optional for older saves). */
+  sceneBoundaries?: SceneBoundary[];
   /** Original media bytes. */
   media: Blob;
   /** MIME type used when reconstructing a File. */
@@ -123,6 +127,8 @@ export async function putProject(input: ProjectWrite): Promise<string> {
     model: isModelChoice(input.model) ? input.model : "base",
     words: input.words,
     showDeleted: input.showDeleted,
+    manualCuts: input.manualCuts ?? [],
+    sceneBoundaries: input.sceneBoundaries ?? [],
     media: input.media,
     mediaType: input.mediaType,
     createdAt: input.createdAt ?? now,

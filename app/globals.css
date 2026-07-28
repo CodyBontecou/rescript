@@ -42,3 +42,39 @@ body {
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Timeline: split confirmation flash */
+@keyframes tl-split-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+  }
+}
+.tl-split-flash {
+  animation: tl-split-flash 0.42s ease-out;
+}
+
+@keyframes tl-playhead-pulse {
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-50%) scale(1.35);
+    opacity: 0.75;
+  }
+}
+.tl-playhead-split {
+  animation: tl-playhead-pulse 1.6s ease-in-out infinite;
+}
+
+.tl-trim-handle:hover > div {
+  transform: scaleX(1.4);
+}
+.tl-word-handle:hover > span {
+  opacity: 1 !important;
+  width: 2px;
+}

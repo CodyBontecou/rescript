@@ -22,7 +22,11 @@ the media. Export the final cut — without your file ever leaving your device.
 - 📥 **Import your own transcript** — skip Whisper and edit with an SRT, VTT, or JSON caption file
 - 🧹 **Filler removal** — one-click cut of "um", "uh", and similar fillers
 - 🗣️ **Speaker diarization** — the transcript is grouped by speaker
-- 🎬 **Timeline** — waveform, word labels, cut regions, playhead, zoom
+- 🎬 **Timeline** — waveform, wordbar with draggable timing handles, Split,
+  cut regions, playhead, zoom
+- ✂️ **Split & trim** — blade clips at the playhead; drag clip edges to refine
+  cuts beyond word boundaries
+- 🎯 **Word timing** — zoom in and drag a word's edges when ASR alignment is off
 - ⚡ **Live preview** — playback skips your cuts in real time
 - 📦 **In-browser export** — frame-accurate MP4 (video) or M4A (audio) with ffmpeg.wasm
 - 🎧 **Audio files** — edit podcasts, voice notes, and interviews the same way as video
