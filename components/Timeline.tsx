@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Maximize2, Scissors, ZoomIn, ZoomOut } from "lucide-react";
@@ -364,6 +365,11 @@ export default function Timeline() {
     setCurrentTime(t);
   }, []);
 
+  const focusTimeline = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    scrollRef.current?.focus({ preventScroll: true });
+  }, []);
+
   const endDrag = useCallback(() => {
     if (dragRef.current) {
       useEditorStore.getState().endGesture();
@@ -421,6 +427,7 @@ export default function Timeline() {
       const target = e.target as HTMLElement;
       if (target.closest("[data-tl-interactive]")) return;
 
+      focusTimeline();
       const t = timeFromClientX(e.clientX);
       const clip = clips.find((c) => t >= c.start && t < c.end);
       useEditorStore.getState().setSelectedClipIndex(clip?.index ?? null);
@@ -429,7 +436,7 @@ export default function Timeline() {
       e.currentTarget.setPointerCapture(e.pointerId);
       seekTo(t);
     },
-    [clips, seekTo, timeFromClientX]
+    [clips, focusTimeline, seekTo, timeFromClientX]
   );
 
   const startWordDrag = useCallback(
@@ -455,13 +462,14 @@ export default function Timeline() {
       e.stopPropagation();
       e.preventDefault();
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      focusTimeline();
       const store = useEditorStore.getState();
       store.setSelectedClipIndex(clipIndex);
       store.beginGesture();
       dragRef.current = { type: "trim", clipIndex, edge };
       setDragging(true);
     },
-    []
+    [focusTimeline]
   );
 
   const doSplit = useCallback(() => {
@@ -470,6 +478,22 @@ export default function Timeline() {
     setSplitFlash(true);
     window.setTimeout(() => setSplitFlash(false), 420);
   }, []);
+
+  const deleteSelectedClip = useCallback(() => {
+    if (selectedClipIndex === null) return false;
+    return useEditorStore.getState().deleteClip(selectedClipIndex);
+  }, [selectedClipIndex]);
+
+  const onTimelineKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!deleteSelectedClip()) return;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [deleteSelectedClip]
+  );
 
   // Word labels for the visible window
   const visibleWords = useMemo(() => {
@@ -568,9 +592,17 @@ export default function Timeline() {
             zoomViewRef.current.scrollLeft = nextScrollLeft;
             setScrollLeft(nextScrollLeft);
           }}
+          tabIndex={ready ? 0 : -1}
+          aria-label="Timeline. Select a clip and press Delete to cut it."
+          onKeyDown={onTimelineKeyDown}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+              useEditorStore.getState().setSelectedClipIndex(null);
+            }
+          }}
           onPointerDown={onBackgroundPointerDown}
           onPointerMove={onPointerMove}
-          className="scrollbar-thin absolute inset-0 touch-none overflow-x-auto overflow-y-hidden select-none"
+          className="scrollbar-thin absolute inset-0 touch-none overflow-x-auto overflow-y-hidden select-none focus:outline-none"
           style={{ cursor: dragging ? "col-resize" : "default" }}
         >
           <div className="relative h-full" style={{ width: totalWidth }}>
@@ -578,21 +610,39 @@ export default function Timeline() {
             {sceneBoundaries.map((b) => {
               const x = b.time * pps;
               return (
-                <div
+                <button
+                  type="button"
                   key={b.id}
                   data-tl-interactive
-                  className="tl-boundary group/boundary absolute top-0 bottom-0 z-[5] w-3 -translate-x-1/2 cursor-pointer"
+                  className="tl-boundary group/boundary absolute top-0 bottom-0 z-[5] w-3 -translate-x-1/2 cursor-pointer focus-visible:outline-none"
                   style={{ left: x }}
-                  title="Scene split — double-click to join"
+                  aria-label={`Scene split at ${formatTime(b.time)}. Press Delete to join clips.`}
+                  title="Scene split — press Delete or double-click to join"
+                  onKeyDown={(e) => {
+                    if (
+                      (e.key !== "Delete" && e.key !== "Backspace") ||
+                      e.metaKey ||
+                      e.ctrlKey ||
+                      e.altKey
+                    ) {
+                      return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    useEditorStore.getState().removeSceneBoundary(b.id);
+                  }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     useEditorStore.getState().removeSceneBoundary(b.id);
                   }}
-                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.currentTarget.focus({ preventScroll: true });
+                  }}
                 >
-                  <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-amber-400/80 transition group-hover/boundary:bg-amber-500" />
-                  <div className="absolute top-[3px] left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 rounded-[1px] bg-amber-400 shadow-sm shadow-amber-500/30 transition group-hover/boundary:scale-125 group-hover/boundary:bg-amber-500" />
-                </div>
+                  <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-amber-400/80 transition group-hover/boundary:bg-amber-500 group-focus-visible/boundary:bg-amber-600" />
+                  <div className="absolute top-[3px] left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 rounded-[1px] bg-amber-400 shadow-sm shadow-amber-500/30 transition group-hover/boundary:scale-125 group-hover/boundary:bg-amber-500 group-focus-visible/boundary:scale-125 group-focus-visible/boundary:bg-amber-600 group-focus-visible/boundary:ring-2 group-focus-visible/boundary:ring-amber-300" />
+                </button>
               );
             })}
 
@@ -694,6 +744,8 @@ export default function Timeline() {
                     // Clicking the chip body seeks to word start (not a bound drag)
                     if ((e.target as HTMLElement).dataset.edge) return;
                     e.stopPropagation();
+                    e.preventDefault();
+                    focusTimeline();
                     seekTo(w.start);
                     // Select clip under this word
                     const clip = clips.find(

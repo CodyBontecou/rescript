@@ -10,6 +10,7 @@ import type {
   Word,
 } from "./types";
 import {
+  addManualCut,
   applyWordBounds,
   canSplitAt,
   getClipSegments,
@@ -125,6 +126,8 @@ interface EditorState {
   splitAtPlayhead: () => boolean;
   /** Remove a scene boundary by id (join adjacent clips). */
   removeSceneBoundary: (id: number) => void;
+  /** Cut a timeline clip and connect the kept clips on either side. */
+  deleteClip: (clipIndex: number) => boolean;
   /** Trim the in or out edge of a clip segment by index. */
   trimClipEdge: (
     clipIndex: number,
@@ -483,6 +486,34 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       sceneBoundaries: sceneBoundaries.filter((b) => b.id !== id),
       selectedClipIndex: null,
     });
+  },
+
+  deleteClip: (clipIndex) => {
+    const s = get();
+    const cuts = getCutRanges(s.words, s.duration, s.manualCuts);
+    const keeps = getKeepRanges(cuts, s.duration);
+    const clips = getClipSegments(keeps, s.sceneBoundaries);
+    const clip = clips.find((candidate) => candidate.index === clipIndex);
+    if (!clip || clips.length <= 1) return false;
+
+    const result = addManualCut(
+      s.manualCuts,
+      clip.start,
+      clip.end,
+      s.nextManualCutId
+    );
+    const atClipEdge = (time: number) =>
+      Math.abs(time - clip.start) < 1e-4 || Math.abs(time - clip.end) < 1e-4;
+
+    pushEdit(get, set, {
+      manualCuts: result.cuts,
+      sceneBoundaries: s.sceneBoundaries.filter(
+        (boundary) => !atClipEdge(boundary.time)
+      ),
+      nextManualCutId: result.nextId,
+      selectedClipIndex: null,
+    });
+    return true;
   },
 
   trimClipEdge: (clipIndex, edge, time) => {

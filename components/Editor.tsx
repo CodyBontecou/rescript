@@ -11,6 +11,33 @@ import MediaPreview from "./MediaPreview";
 import Timeline from "./Timeline";
 import ExportDialog from "./ExportDialog";
 
+const NON_TYPING_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "hidden",
+  "image",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+]);
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (
+    target.isContentEditable ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT"
+  ) {
+    return true;
+  }
+  if (target.tagName !== "INPUT") return false;
+  const type = (target.getAttribute("type") ?? "text").toLowerCase();
+  return !NON_TYPING_INPUT_TYPES.has(type);
+}
+
 export default function Editor() {
   const status = useEditorStore((s) => s.status);
   const videoFile = useEditorStore((s) => s.videoFile);
@@ -49,9 +76,10 @@ export default function Editor() {
   // Global shortcuts: space = play/pause, ⌘Z / ⇧⌘Z = undo / redo, S = split.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
-        return;
+      // Only suppress editor shortcuts while the user is actually typing.
+      // File inputs can retain focus after their native picker closes, especially
+      // in Safari, and treating every <input> as editable strands the shortcuts.
+      if (isTypingTarget(e.target)) return;
       const s = useEditorStore.getState();
       if (e.code === "Space" && s.videoEl && !s.exportOpen) {
         e.preventDefault();

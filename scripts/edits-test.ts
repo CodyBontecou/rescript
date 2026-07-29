@@ -12,6 +12,7 @@ import {
   getWordCutRanges,
   trimClipEdgeResult,
 } from "../lib/edits";
+import { useEditorStore } from "../lib/store";
 import type { ManualCut, SceneBoundary, Word } from "../lib/types";
 
 function assert(cond: boolean, msg: string) {
@@ -95,6 +96,45 @@ function nearly(a: number, b: number, eps = 1e-3) {
     nearly(result!.manualCuts[0].start, 0) && nearly(result!.manualCuts[0].end, 1),
     "cut [0,1)"
   );
+}
+
+// --- Deleting a selected clip cuts it, joins its neighbors, and is undoable ---
+{
+  useEditorStore.setState({
+    words: [word(1, "test", 0, 3)],
+    duration: 3,
+    manualCuts: [],
+    sceneBoundaries: [
+      { id: 7, time: 1 },
+      { id: 8, time: 2 },
+    ],
+    past: [],
+    future: [],
+    selectedClipIndex: 1,
+    nextManualCutId: 1,
+    gestureActive: false,
+    status: "ready",
+  });
+
+  assert(useEditorStore.getState().deleteClip(1), "selected clip is deleted");
+  let state = useEditorStore.getState();
+  assert(
+    state.manualCuts.length === 1 &&
+      nearly(state.manualCuts[0].start, 1) &&
+      nearly(state.manualCuts[0].end, 2),
+    "selected clip becomes a cut"
+  );
+  assert(state.sceneBoundaries.length === 0, "neighboring clips are joined");
+
+  state.undo();
+  state = useEditorStore.getState();
+  assert(state.manualCuts.length === 0, "undo restores the deleted clip");
+  assert(state.sceneBoundaries.length === 2, "undo restores both splits");
+
+  state.redo();
+  state = useEditorStore.getState();
+  assert(state.manualCuts.length === 1, "redo deletes the clip again");
+  assert(state.sceneBoundaries.length === 0, "redo rejoins its neighbors");
 }
 
 console.log("edits-test: all passed");
