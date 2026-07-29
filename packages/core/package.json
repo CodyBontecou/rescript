@@ -1,0 +1,28 @@
+{
+  "name": "@rescript/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./commands": "./src/commands.ts",
+    "./edits": "./src/edits.ts",
+    "./fillers": "./src/fillers.ts",
+    "./hallucinations": "./src/hallucinations.ts",
+    "./transcript": "./src/transcript.ts",
+    "./vad": "./src/vad.ts",
+    "./services": "./src/services.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

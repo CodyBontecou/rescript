@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/iOS-schema.json",
+  "identifier": "av-media-ios",
+  "description": "iOS AVFoundation media job plugin permissions",
+  "platforms": ["iOS"],
+  "windows": ["main"],
+  "permissions": [
+    "av-media:allow-start-prepare",
+    "av-media:allow-start-export",
+    "av-media:allow-snapshot",
+    "av-media:allow-cancel",
+    "av-media:allow-prepare-result",
+    "av-media:allow-export-result",
+    "av-media:allow-register-listener",
+    "av-media:allow-remove-listener"
+  ]
+}

@@ -1,109 +1,127 @@
-# Rescript — Build Plan
+# Rescript Tauri Rewrite
 
-Rescript is a fully offline, open-source, transcript-based video editor: upload a
-video, get a speaker-labelled transcript synced to the timeline, delete words to
-cut the corresponding clip out of the video, and export the result — all in the
-browser, with no server, no auth, and no API calls.
+## Objective
+
+Preserve the existing static web app while delivering a Tauri 2 Studio app for macOS and iOS first. React owns presentation; Effect owns platform-neutral workflows and service boundaries; native code owns media, PCM, models, files, and long-running jobs.
 
 ## Architecture
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ Next.js (App Router, client-only editor)                           │
-│                                                                    │
-│  ┌───────────────┐  ┌────────────────┐  ┌───────────────────────┐  │
-│  │ TranscriptPanel│  │ MediaPreview  │  │ Timeline (canvas)     │  │
-│  │ words / cuts   │  │ skip playback │  │ waveform + playhead   │  │
-│  └───────┬───────┘  └───────┬────────┘  └──────────┬────────────┘  │
-│          └───────────── zustand store ─────────────┘               │
-│                     (words, cuts, playback, status)                │
-│                                                                    │
-│  ┌──────────────────────────┐   ┌───────────────────────────────┐  │
-│  │ Web Worker                │   │ ffmpeg.wasm (multi-threaded)  │  │
-│  │ transformers.js           │   │ - audio extraction (16k PCM)  │  │
-│  │ - Whisper (word timing)   │   │ - export: trim+concat+encode  │  │
-│  │ - pyannote (diarization)  │   └───────────────────────────────┘  │
-│  └──────────────────────────┘                                       │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-### Data model
-
-The single source of truth is the word list:
-
-```ts
-interface Word {
-  id: number;
-  text: string;
-  start: number;   // seconds, original media time
-  end: number;
-  speaker: number; // sequential speaker index
-  deleted: boolean;
-}
+```text
+React Studio UI
+  ├─ Zustand editor view/history state
+  ├─ @rescript/core
+  │    schemas · edit math · editor commands · typed errors/services
+  ├─ @rescript/workflows
+  │    projects · optimistic save · playback · jobs · reconnect
+  └─ @rescript/platform-tauri
+       invoke/event adapters; opaque file and playback references
+                         │
+                    Tauri commands
+                         │
+  ┌──────────────────────┴────────────────────────────┐
+  │ ProjectStore                                      │
+  │ projects/<uuid>/manifest.json + media + derived   │
+  │ atomic writes · backups · expected revisions      │
+  ├───────────────────────────────────────────────────┤
+  │ macOS: FFmpeg/ffprobe + whisper-cli + FluidAudio  │
+  │ iOS: AVFoundation + WhisperKit/FluidAudio +       │
+  │      SpeakerKit                                   │
+  └───────────────────────────────────────────────────┘
 ```
 
-Everything else is derived:
+Full source media and PCM stay native. IPC carries manifests, opaque references, 100 Hz waveform peaks, timed words, keep ranges, progress, and final results.
 
-- **Cut ranges** — runs of consecutive deleted words merged into time ranges
-  (including the silence between adjacent deleted words).
-- **Keep ranges** — the inverse of cut ranges over `[0, duration]`; drives both
-  preview playback and export.
-- **Edited duration / time mapping** — for the player clock and export summary.
+## Workspace
 
-### Pipeline (all local)
+- `apps/web` — preserved Next.js browser client
+- `apps/studio` — Vite/React Tauri client and responsive editor
+- `packages/core` — domain schemas, commands, edit math, service contracts
+- `packages/workflows` — Effect workflows and reconnectable jobs
+- `packages/platform-web` — browser repositories, files, playback, preferences
+- `packages/platform-tauri` — Tauri repositories, files, jobs, playback, models
 
-1. **Upload** — a single video file; object URL feeds the `<video>` preview
-   immediately.
-2. **Audio extraction** — ffmpeg.wasm decodes the audio track to mono 16 kHz
-   `f32le` PCM (Whisper's native input; also used to draw the waveform).
-3. **Transcription** — a Web Worker runs
-   `onnx-community/whisper-base_timestamped` via transformers.js with
-   `return_timestamps: "word"` (30 s chunks, 5 s stride), streaming partial text
-   and progress back to the UI. WebGPU is used when available, with a WASM
-   fallback.
-4. **Diarization** — the same worker runs
-   `onnx-community/pyannote-segmentation-3.0` and assigns each word the speaker
-   whose segment contains the word's midpoint (nearest segment as fallback).
-   Diarization failure degrades gracefully to a single speaker.
-5. **Editing** — selecting words and pressing ⌫ (or the floating Cut button)
-   marks them deleted; preview playback skips cut ranges in real time; undo/redo
-   snapshots the word list.
-6. **Export** — ffmpeg.wasm builds a `trim`/`atrim` + `concat` filter graph from
-   the keep ranges and re-encodes to MP4 (`libx264` + `aac`), so cuts land
-   exactly on word boundaries rather than keyframes.
+## Completed milestones
 
-### Offline strategy
+1. **Workspace migration**
+   - npm workspaces and shared TypeScript configuration
+   - original web app moved intact to `apps/web`
+   - deployment and asset paths updated
 
-- **No server code at all** — the Next.js app is a static client bundle; there
-  is no API route, no auth, no telemetry.
-- **WASM binaries served same-origin** — `postinstall` copies `@ffmpeg/core-mt`
-  and `onnxruntime-web` runtime files into `public/vendor/` (no CDN at runtime).
-- **Models** — fetched from the Hugging Face Hub on *first* use only
-  (~85 MB Whisper base + ~6 MB pyannote) and cached in browser Cache Storage;
-  every subsequent run works with the network fully disconnected.
-- **COOP/COEP headers** enable `SharedArrayBuffer` for multi-threaded ffmpeg and
-  ONNX inference.
+2. **Shared Effect domain**
+   - versioned project, word, range, model, progress, and result schemas
+   - platform-neutral editor commands and range math
+   - project, file, media, transcription, model, playback, and preferences services
+   - browser and native service layers
 
-## Milestones
+3. **Tauri Apple shell**
+   - responsive macOS/iPhone app, native dialogs, icons, capabilities
+   - rustup-aware Tauri command wrapper
+   - generated iOS Xcode project and simulator builds
 
-1. ✅ Scaffold Next.js (App Router, TypeScript, Tailwind), COOP/COEP headers,
-   local WASM asset pipeline.
-2. ✅ Media ingest: upload screen, ffmpeg singleton, audio extraction.
-3. ✅ Transcription worker: Whisper word timestamps + pyannote diarization,
-   streamed progress/partial text.
-4. ✅ Editor UI: transcript panel (left), video preview (right), timeline with
-   waveform, ruler, word labels, playhead, zoom (bottom).
-5. ✅ Editing core: word selection → cut/restore, undo/redo, playback that
-   skips cuts, show/hide deleted words.
-6. ✅ Export: keep-range concat render to MP4 with progress, download.
-7. ✅ Flexible timeline editing: word-boundary drag, Split at playhead
-   (scene boundaries), clip trim handles, manual cuts merged into export.
+4. **Native projects and file authority**
+   - UUID project directories and immutable copied source media
+   - strict path/timing/order/ID validation
+   - optimistic revisions, atomic temporary/backup saves, safe deletion
+   - one-use opaque import/export tokens created only by native dialogs
 
-## Future work
+5. **Native media pipeline**
+   - desktop FFmpeg/ffprobe preparation and export
+   - iOS AVFoundation preparation and export
+   - project-local 16 kHz WAV, 100 Hz waveform, ordered keep-range rendering
+   - progress, cancellation, journals, background leases, restart recovery
+   - portrait-video transform preservation and rollback-safe replacement
 
-- Larger Whisper variants + language selection UI; local model import for
-  air-gapped first runs.
-- Smarter export: stream-copy for keyframe-aligned segments, WebCodecs-based
-  rendering for speed.
-- Multi-clip projects (reorder scenes), captions burn-in.
-- Gap clips / insert silence between words.
+6. **Native transcription and diarization**
+   - desktop verified GGML Base/Small model management and `whisper-cli`
+   - desktop Parakeet v2/v3 through the bundled FluidAudio CLI
+   - iOS WhisperKit 1.0.0 plus pinned FluidAudio Core ML transcription and model management
+   - iOS SpeakerKit/Pyannote speaker assignment
+   - word timestamps, progress, cancellation, journals, and recovery
+
+7. **Complete Studio editor**
+   - cut/restore/correct words, speaker assignment, filler removal
+   - undo/redo and serialized revision-safe autosave
+   - playback cut skipping and active-word synchronization
+   - reduced-waveform timeline, zoom, timing handles, split/join, clip cut/trim
+   - native transcript import and export destination flow
+   - responsive macOS/iPhone layouts and touch action sheet
+   - durable job bookmarks and snapshot/listener race recovery
+
+8. **Packaging and verification**
+   - release packaging requires explicitly supplied redistributable native tools
+   - headless-safe macOS DMG builder
+   - complete arm64 iOS simulator bundle
+   - shared TypeScript, Vitest, Rust test, formatting, lint, Studio Vite, macOS, and iOS verification commands
+
+## Storage layout
+
+```text
+app-data/
+  projects/<uuid>/
+    manifest.json
+    manifest.json.bak
+    media/<immutable-source>
+    derived/media/audio-16k.wav
+    derived/media/waveform.json
+  jobs/*.json
+  transcription-jobs/*.json
+  models/
+```
+
+A project manifest stores schema version, revision, media reference, duration, model choice, words, manual cuts, scene boundaries, deleted-word visibility, and timestamps.
+
+## Offline and model behavior
+
+- Source media and transcript content never require a network request.
+- First-use model downloads come from pinned Hugging Face repository revisions.
+- Downloaded files are cached under app-controlled storage.
+- Subsequent preparation, transcription, editing, playback, and export work offline.
+- Desktop release packages must stage redistributable FFmpeg, ffprobe, whisper-cli, and fluidaudiocli binaries; debug builds may use configured/Homebrew/PATH tools.
+
+## Remaining future work
+
+- Windows/Linux FFmpeg and transcription packaging
+- Android media/transcription plugins
+- Language selection and local air-gapped model import UI
+- Multi-clip projects, clip reordering, inserted gaps/silence, caption burn-in
+- Notarization, signing, App Store metadata, and release automation

@@ -1,0 +1,38 @@
+{
+  "name": "@rescript/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "assets": "node scripts/copy-assets.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg/core-mt": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@huggingface/transformers": "^4.2.0",
+    "@next/third-parties": "^16.2.12",
+    "@rescript/core": "0.1.0",
+    "coi-serviceworker": "^0.1.7",
+    "lucide-react": "^1.27.0",
+    "next": "16.2.12",
+    "parakeet.js": "^1.4.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^20.19.24",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-start-prepare"
+description = "Enables the start_prepare command without any pre-configured scope."
+commands.allow = ["start_prepare"]
+
+[[permission]]
+identifier = "deny-start-prepare"
+description = "Denies the start_prepare command without any pre-configured scope."
+commands.deny = ["start_prepare"]

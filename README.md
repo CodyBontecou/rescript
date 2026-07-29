@@ -4,81 +4,158 @@
 
 # Rescript
 
-**Edit video and audio like you edit text — fully offline, in your browser.**
+**Edit audio and video like text, privately and on-device.**
 
-**✨ Try it now: [wassgha.github.io/rescript](https://wassgha.github.io/rescript/)**
+Rescript is an open-source transcript-based media editor. Delete words to cut the matching media, correct text, assign speakers, split and trim clips on the timeline, preview the edit, and export the final cut.
 
-[![Follow @wassgha on X](https://img.shields.io/badge/Follow%20@wassgha-000000?logo=x&logoColor=white)](https://x.com/wassgha)
+This repository now contains two clients:
 
-[![Rescript Demo](./screenshots/rescript.png)](https://wassgha.github.io/rescript/)
+- **Rescript Studio** — a Tauri 2 desktop/mobile app targeting macOS and iOS first.
+- **Rescript Web** — the original static Next.js app, still available at [wassgha.github.io/rescript](https://wassgha.github.io/rescript/).
 
-Rescript is an open-source, transcript-based media editor. Drop in a video or
-audio file and it is transcribed locally with per-word timestamps and speaker
-labels. Delete words in the transcript and the corresponding clip is cut from
-the media. Export the final cut — without your file ever leaving your device.
+## Studio features
 
-- 🔒 **Private by design** — no server, no auth, no uploads; all media processing happens on-device
-- 📝 **Word-level editing** — select words, press ⌫, the cut follows the text
-- 📥 **Import your own transcript** — skip Whisper and edit with an SRT, VTT, or JSON caption file
-- 🧹 **Filler removal** — one-click cut of "um", "uh", and similar fillers
-- 🗣️ **Speaker diarization** — the transcript is grouped by speaker
-- 🎬 **Timeline** — waveform, wordbar with draggable timing handles, Split,
-  cut regions, playhead, zoom
-- ✂️ **Split & trim** — blade clips at the playhead; drag clip edges to refine
-  cuts beyond word boundaries
-- 🎯 **Word timing** — zoom in and drag a word's edges when ASR alignment is off
-- ⚡ **Live preview** — playback skips your cuts in real time
-- 📦 **In-browser export** — frame-accurate MP4 (video) or M4A (audio) with ffmpeg.wasm
-- 🎧 **Audio files** — edit podcasts, voice notes, and interviews the same way as video
+- File-backed, versioned native projects with atomic saves and optimistic revisions
+- Word cut/restore/correction, speaker assignment, filler removal, undo/redo
+- Scene splits, explicit joins, clip deletion, edge trims, word timing handles, zoom
+- Playback synchronized to the transcript and automatically skipping cut ranges
+- Native media preparation and export with progress, cancellation, journals, and recovery
+- Native offline transcription with Whisper Base/Small and Parakeet v2/v3 models
+- On-device iOS speaker diarization with Argmax SpeakerKit/Pyannote
+- Responsive macOS and iPhone editor using the same React and Effect workflows
+- Reduced waveform and word data over IPC; source media and PCM remain native
 
-## Stack
+## Workspace
 
-| Piece | Tech |
-| --- | --- |
-| App | [Next.js](https://nextjs.org) + React + TypeScript + Tailwind |
-| Transcription | [transformers.js](https://github.com/huggingface/transformers.js) running [`whisper-base_timestamped`](https://huggingface.co/onnx-community/whisper-base_timestamped) or [`whisper-small_timestamped`](https://huggingface.co/onnx-community/whisper-small_timestamped) (WebGPU with WASM fallback) in a Web Worker |
-| Speaker labels | [`pyannote-segmentation-3.0`](https://huggingface.co/onnx-community/pyannote-segmentation-3.0) (ONNX) |
-| Media processing | [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) (multi-threaded) for audio extraction and export |
-| State | zustand |
+```text
+apps/
+  studio/              Vite + React + Tauri 2 app
+  web/                 Original Next.js browser app
+packages/
+  core/                Schemas, edit math, commands, Effect service contracts
+  workflows/           Project, autosave, playback, job, and reconnect workflows
+  platform-tauri/      Native Tauri service adapters
+  platform-web/        Browser IndexedDB/file/playback adapters
+```
 
 ## Development
 
+Requirements:
+
+- Node.js 22 or newer and npm
+- Rust stable through `rustup`
+- macOS 14+ Studio: FFmpeg, ffprobe, `whisper-cli`, and a `fluidaudiocli` build from the pinned FluidAudio revision for local development
+- iOS 17+ Studio: Xcode, an installed iOS simulator runtime, and Cocoa/Swift tooling used by Tauri
+
 ```bash
-npm install     # also copies ffmpeg/onnxruntime WASM into public/vendor
-npm run dev     # dev server
-npm run build   # production build
-npm run lint    # eslint
+npm install
+npm test
+npm run typecheck
+npm run build:studio
+npm run dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and drop in a video with an
-audio track.
+### Run Studio on macOS
 
-> **Note on "offline":** the AI models (Whisper Base ~200 MB, or Small ~600 MB,
-> plus a small speaker model) are downloaded from the Hugging Face Hub the
-> *first* time you transcribe, then cached in browser storage. After that,
-> everything — transcription, editing, export — works with the network fully
-> disconnected. Your media and transcript never leave the device; the only
-> third-party request the app makes is anonymous page analytics (Google
-> Analytics), which fails silently when offline.
+```bash
+# Optional development overrides
+export RESCRIPT_FFMPEG=/path/to/ffmpeg
+export RESCRIPT_FFPROBE=/path/to/ffprobe
+export RESCRIPT_WHISPER_CLI=/path/to/whisper-cli
+export RESCRIPT_FLUIDAUDIO_CLI=/path/to/fluidaudiocli
 
-## How it works
+npm run dev:studio
+```
 
-1. **Extract** — ffmpeg.wasm decodes the audio track to mono 16 kHz PCM.
-2. **Transcribe** — Whisper runs in a Web Worker with `return_timestamps: "word"`,
-   streaming text as it goes; pyannote assigns a speaker to every word.
-   Choose **Whisper Base**, **Whisper Small**, or **Import transcript**
-   (SRT / VTT / JSON) on the homepage.
-3. **Edit** — deleting words produces "cut ranges" of the original media. The
-   preview player skips them in real time and the timeline shows them in red.
-   **Remove fillers** cuts every detected "um" / "uh" / etc. in one click.
-4. **Export** — the kept ranges are trimmed and concatenated with an ffmpeg
-   filter graph and re-encoded (`libx264`/`aac`), so cuts are word-accurate.
+Without overrides, desktop development also checks `resources/bin`, Homebrew locations, and `PATH`. Build the matching Parakeet sidecar from the same FluidAudio revision used by iOS:
 
-## Browser support
+```bash
+git clone https://github.com/FluidInference/FluidAudio.git /tmp/FluidAudio
+git -C /tmp/FluidAudio checkout 88d6d8166880dee1ac7c32c80f8e10cd782f8ca8
+swift build --package-path /tmp/FluidAudio -c release --product fluidaudiocli
+export RESCRIPT_FLUIDAUDIO_CLI=/tmp/FluidAudio/.build/release/fluidaudiocli
+```
 
-A Chromium-based browser is recommended. The app requires `SharedArrayBuffer`
-(served with COOP/COEP headers) and uses WebGPU for inference when available,
-falling back to WASM otherwise.
+### Build macOS packages
+
+Release builds intentionally require redistributable native binaries so a broken external-tool-dependent package is not produced:
+
+```bash
+export RESCRIPT_BUNDLE_FFMPEG=/path/to/redistributable/ffmpeg
+export RESCRIPT_BUNDLE_FFPROBE=/path/to/redistributable/ffprobe
+export RESCRIPT_BUNDLE_WHISPER_CLI=/path/to/redistributable/whisper-cli
+export RESCRIPT_BUNDLE_FLUIDAUDIO_CLI=/path/to/redistributable/fluidaudiocli
+npm run build:macos
+```
+
+`build:macos` stages those tools, builds `Rescript.app`, and creates a headless-safe DMG with `hdiutil`. A local debug package may use external tools:
+
+```bash
+npm run tauri:build:macos --workspace @rescript/studio -- --debug
+```
+
+### Build iOS
+
+```bash
+# One-time generated Apple project setup
+npm run tauri:ios:init --workspace @rescript/studio
+
+# arm64 simulator bundle
+npm run tauri --workspace @rescript/studio -- ios build --debug --target aarch64-sim --ci
+```
+
+The simulator app is written to:
+
+```text
+apps/studio/src-tauri/gen/apple/build/arm64-sim/Rescript.app
+```
+
+## Native processing
+
+### macOS
+
+- FFmpeg/ffprobe decode project media into a project-local mono 16 kHz WAV and 100 Hz peak waveform.
+- `whisper-cli` produces timestamped words with verified GGML Base/Small models; `fluidaudiocli` runs Parakeet v2/v3 through FluidAudio/Core ML on Apple silicon.
+- FFmpeg exports ordered keep ranges to M4A or MP4.
+
+### iOS
+
+- AVFoundation prepares media and exports keep ranges without full media crossing IPC.
+- [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) 1.0.0 handles Whisper; pinned [FluidAudio](https://github.com/FluidInference/FluidAudio) handles Parakeet v2/v3. Both produce word timestamps.
+- SpeakerKit performs Pyannote diarization and assigns speaker IDs. Speaker attribution is best-effort and skipped for prepared WAVs over 120 MiB to control mobile memory use.
+
+Whisper and speaker models download on first use, are cached under app-controlled storage, and can be used offline afterward. Media and transcript content are never uploaded.
+
+## Project and security model
+
+Projects live under the app data directory as `projects/<uuid>/` and contain an immutable copied source, derived native assets, and a schema-versioned `manifest.json`.
+
+- Saves use expected revisions, temporary files, backups, and atomic replacement.
+- Timings and IDs are finite, ordered, unique, and constrained to media duration.
+- Import/export dialogs grant opaque, one-use native file tokens; renderer-provided arbitrary paths are rejected.
+- Long-running jobs persist journals. A restarted app reconnects to completed jobs or reports interrupted jobs instead of pretending they are still running.
+- The webview receives project references, reduced waveform peaks, words, results, and progress—not source bytes or PCM.
+
+## Web app
+
+The browser app remains a static, offline-capable Next.js client using transformers.js for Whisper, Parakeet.js for Parakeet v2/v3, pyannote ONNX, IndexedDB, and ffmpeg.wasm.
+
+```bash
+npm run dev:web
+npm run build:web
+npm run lint --workspace @rescript/web
+```
+
+A Chromium-based browser is recommended because the web pipeline uses `SharedArrayBuffer`, WebGPU when available, and a WASM fallback.
+
+## Platform status
+
+| Platform | Status |
+| --- | --- |
+| macOS | Studio editor and native jobs implemented |
+| iOS | Studio editor, AVFoundation, WhisperKit, and SpeakerKit implemented |
+| Web | Existing static app preserved |
+| Windows / Linux / Android | Service boundaries prepared; native engines and packaging remain future work |
 
 ## License
 
@@ -86,4 +163,4 @@ MIT
 
 ---
 
-Built by [@wassgha](https://x.com/wassgha) — follow along on X for updates.
+Originally built by [@wassgha](https://x.com/wassgha).

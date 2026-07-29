@@ -1,35 +1,28 @@
 {
-  "name": "rescript",
+  "name": "rescript-workspace",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "postinstall": "node scripts/copy-assets.mjs"
-  },
-  "dependencies": {
-    "@ffmpeg/core-mt": "^0.12.10",
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
-    "@huggingface/transformers": "^4.2.0",
-    "@next/third-parties": "^16.2.12",
-    "coi-serviceworker": "^0.1.7",
-    "lucide-react": "^1.27.0",
-    "next": "16.2.12",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "zustand": "^5.0.14"
+    "dev": "npm run dev:web",
+    "dev:web": "npm run dev --workspace @rescript/web",
+    "dev:studio": "npm run tauri:dev --workspace @rescript/studio",
+    "build": "npm run build:web",
+    "build:web": "npm run build --workspace @rescript/web",
+    "build:studio": "npm run build --workspace @rescript/studio",
+    "build:macos": "npm run tauri:build:macos --workspace @rescript/studio",
+    "tauri": "npm run tauri --workspace @rescript/studio --",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "postinstall": "npm run assets --workspace @rescript/web"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.12",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }

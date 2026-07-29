@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/apps/*/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -13,12 +14,24 @@
 # testing
 /coverage
 
+# agent-local planning state
+/.pi/
+
 # next.js
 /.next/
 /out/
+/apps/*/.next/
+/apps/*/out/
 
 # production
 /build
+/apps/*/dist/
+/apps/*/src-tauri/target/
+/apps/*/src-tauri/plugins/*/target/
+/apps/*/src-tauri/plugins/*/.tauri/
+/apps/*/src-tauri/plugins/*/ios/.build/
+/apps/studio/src-tauri/resources/bin/*
+!/apps/studio/src-tauri/resources/bin/.gitkeep
 
 # misc
 .DS_Store
@@ -43,3 +56,5 @@ next-env.d.ts
 # runtime assets copied from node_modules on postinstall
 /public/vendor/
 /public/coi-serviceworker.js
+/apps/web/public/vendor/
+/apps/web/public/coi-serviceworker.js

@@ -1,0 +1,23 @@
+{
+  "name": "@rescript/platform-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./projects": "./src/projects.ts",
+    "./file-picker": "./src/file-picker.ts",
+    "./playback": "./src/playback.ts",
+    "./preferences": "./src/preferences.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rescript/core": "0.1.0",
+    "effect": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

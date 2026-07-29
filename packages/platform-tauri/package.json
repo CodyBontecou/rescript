@@ -1,0 +1,28 @@
+{
+  "name": "@rescript/platform-tauri",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./projects": "./src/projects.ts",
+    "./file-picker": "./src/file-picker.ts",
+    "./media-jobs": "./src/media-jobs.ts",
+    "./models": "./src/models.ts",
+    "./playback": "./src/playback.ts",
+    "./preferences": "./src/preferences.ts",
+    "./transcription-jobs": "./src/transcription-jobs.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rescript/core": "0.1.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "effect": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

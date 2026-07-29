@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/iOS-schema.json",
+  "identifier": "transcription-ios",
+  "description": "iOS WhisperKit and SpeakerKit transcription permissions",
+  "platforms": ["iOS"],
+  "windows": ["main"],
+  "permissions": [
+    "transcription:allow-start",
+    "transcription:allow-snapshot",
+    "transcription:allow-cancel",
+    "transcription:allow-result",
+    "transcription:allow-list-models",
+    "transcription:allow-remove-model",
+    "transcription:allow-register-listener",
+    "transcription:allow-remove-listener"
+  ]
+}
