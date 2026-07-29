@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -27,11 +28,19 @@ const TICK_STEPS = [0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600];
 const WORD_VIS_PPS = 22;
 /** Pixels-per-second above which edge handles appear on words. */
 const HANDLE_VIS_PPS = 40;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 256;
+const TRACKPAD_ZOOM_SENSITIVITY = 0.01;
 
 type DragKind =
   | { type: "seek" }
   | { type: "word"; wordId: number; edge: "start" | "end"; origStart: number; origEnd: number }
   | { type: "trim"; clipIndex: number; edge: "in" | "out" };
+
+type WebKitGestureEvent = Event & {
+  clientX?: number;
+  scale?: number;
+};
 
 export default function Timeline() {
   const audio = useEditorStore((s) => s.audio);
@@ -62,6 +71,9 @@ export default function Timeline() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<DragKind | null>(null);
+  const zoomViewRef = useRef({ zoom: 1, scrollLeft: 0 });
+  const pendingZoomScrollRef = useRef<number | null>(null);
+  const gestureRef = useRef<{ startZoom: number; clientX?: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [splitFlash, setSplitFlash] = useState(false);
 
@@ -87,6 +99,118 @@ export default function Timeline() {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const zoomTo = useCallback(
+    (requestedZoom: number, clientX?: number) => {
+      const el = scrollRef.current;
+      if (!el || duration <= 0 || fitPps <= 0) return;
+
+      const rect = el.getBoundingClientRect();
+      const viewportX =
+        typeof clientX === "number" && Number.isFinite(clientX)
+          ? Math.min(Math.max(0, clientX - rect.left), rect.width)
+          : rect.width / 2;
+      const view = zoomViewRef.current;
+      const anchorTime = Math.min(
+        duration,
+        Math.max(0, (view.scrollLeft + viewportX) / (fitPps * view.zoom))
+      );
+      const nextZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, requestedZoom));
+      if (nextZoom === view.zoom) return;
+
+      const maxScrollLeft = Math.max(
+        0,
+        duration * fitPps * nextZoom - el.clientWidth
+      );
+      const nextScrollLeft = Math.min(
+        maxScrollLeft,
+        Math.max(0, anchorTime * fitPps * nextZoom - viewportX)
+      );
+
+      zoomViewRef.current = { zoom: nextZoom, scrollLeft: nextScrollLeft };
+      pendingZoomScrollRef.current = nextScrollLeft;
+      setZoom(nextZoom);
+      setScrollLeft(nextScrollLeft);
+    },
+    [duration, fitPps]
+  );
+
+  const zoomBy = useCallback(
+    (factor: number, clientX?: number) => {
+      zoomTo(zoomViewRef.current.zoom * factor, clientX);
+    },
+    [zoomTo]
+  );
+
+  // Apply the focal-point-preserving scroll before the newly zoomed frame paints.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    const pendingScrollLeft = pendingZoomScrollRef.current;
+    if (!el || pendingScrollLeft === null) return;
+    el.scrollLeft = pendingScrollLeft;
+    pendingZoomScrollRef.current = null;
+  }, [zoom, totalWidth]);
+
+  // macOS trackpad pinch is exposed as ctrl+wheel in Chromium/Firefox and
+  // proprietary gesture events in Safari. Cancel the browser zoom only while
+  // the pointer is over the timeline and use that gesture for timeline zoom.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !ready) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      if (gestureRef.current) return;
+
+      const modeMultiplier =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? el.clientHeight
+            : 1;
+      const delta = event.deltaY * modeMultiplier;
+      const exponent = Math.min(
+        1,
+        Math.max(-1, -delta * TRACKPAD_ZOOM_SENSITIVITY)
+      );
+      zoomBy(Math.exp(exponent), event.clientX);
+    };
+
+    const onGestureStart = (event: Event) => {
+      event.preventDefault();
+      const gesture = event as WebKitGestureEvent;
+      gestureRef.current = {
+        startZoom: zoomViewRef.current.zoom,
+        clientX: gesture.clientX,
+      };
+    };
+
+    const onGestureChange = (event: Event) => {
+      event.preventDefault();
+      const start = gestureRef.current;
+      const scale = (event as WebKitGestureEvent).scale;
+      if (!start || typeof scale !== "number" || !Number.isFinite(scale)) return;
+      zoomTo(start.startZoom * scale, start.clientX);
+    };
+
+    const onGestureEnd = (event: Event) => {
+      event.preventDefault();
+      gestureRef.current = null;
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("gesturestart", onGestureStart, { passive: false });
+    el.addEventListener("gesturechange", onGestureChange, { passive: false });
+    el.addEventListener("gestureend", onGestureEnd, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("gesturestart", onGestureStart);
+      el.removeEventListener("gesturechange", onGestureChange);
+      el.removeEventListener("gestureend", onGestureEnd);
+      gestureRef.current = null;
+    };
+  }, [ready, zoomBy, zoomTo]);
 
   // Draw ruler + waveform + cut overlay + clip tint for the visible window.
   useEffect(() => {
@@ -406,15 +530,15 @@ export default function Timeline() {
         <div className="flex items-center gap-0.5">
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.max(1, z / 1.5))}
-            title="Zoom out"
+            onClick={() => zoomBy(1 / 1.5)}
+            title="Zoom out (or pinch on the timeline)"
             className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100"
           >
             <ZoomOut size={14} />
           </button>
           <button
             type="button"
-            onClick={() => setZoom(1)}
+            onClick={() => zoomTo(MIN_ZOOM)}
             title="Fit"
             className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100"
           >
@@ -422,8 +546,8 @@ export default function Timeline() {
           </button>
           <button
             type="button"
-            onClick={() => setZoom((z) => Math.min(256, z * 1.5))}
-            title="Zoom in — drag word edges to refine timing"
+            onClick={() => zoomBy(1.5)}
+            title="Zoom in (or pinch on the timeline) — drag word edges to refine timing"
             className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100"
           >
             <ZoomIn size={14} />
@@ -439,7 +563,11 @@ export default function Timeline() {
 
         <div
           ref={scrollRef}
-          onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
+          onScroll={(e) => {
+            const nextScrollLeft = e.currentTarget.scrollLeft;
+            zoomViewRef.current.scrollLeft = nextScrollLeft;
+            setScrollLeft(nextScrollLeft);
+          }}
           onPointerDown={onBackgroundPointerDown}
           onPointerMove={onPointerMove}
           className="scrollbar-thin absolute inset-0 touch-none overflow-x-auto overflow-y-hidden select-none"
