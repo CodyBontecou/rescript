@@ -4,17 +4,18 @@ import {
   type EditorCommand,
 } from "@rescript/core/commands";
 import { scheduleProjectAutosave } from "./autosave";
-import type {
-  EditSnapshot,
-  EditorDocument,
-  EditorStatus,
-  JobProgress,
-  MediaExportResult,
-  PlaybackSource,
-  PreparedMedia,
-  ProjectManifest,
-  TranscriptionModel,
-  Word,
+import {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  type EditSnapshot,
+  type EditorDocument,
+  type EditorStatus,
+  type JobProgress,
+  type MediaExportResult,
+  type PlaybackSource,
+  type PreparedMedia,
+  type ProjectManifest,
+  type TranscriptionModel,
+  type Word,
 } from "@rescript/core";
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
@@ -142,7 +143,7 @@ const emptyState = {
   manifest: null,
   preparedMedia: null,
   playback: null,
-  model: "base" as TranscriptionModel,
+  model: DEFAULT_TRANSCRIPTION_MODEL,
   duration: 0,
   words: [] as Word[],
   manualCuts: [] as ProjectManifest["manualCuts"],
@@ -209,7 +210,10 @@ export const useEditorStore = create<EditorState>((set, get) => {
         manifest,
         preparedMedia: options?.preparedMedia ?? null,
         playback: options?.playback ?? null,
-        model: manifest.model === "import" ? "base" : manifest.model,
+        model:
+          manifest.model === "import"
+            ? DEFAULT_TRANSCRIPTION_MODEL
+            : manifest.model,
         duration: manifest.duration,
         words: [...manifest.words],
         manualCuts: [...manifest.manualCuts],

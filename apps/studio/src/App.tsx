@@ -20,14 +20,15 @@ import {
   type RunningJob,
 } from "@rescript/workflows";
 import { TauriPlatformLive } from "@rescript/platform-tauri";
-import type {
-  JobProgress,
-  PlaybackSource,
-  PreparedMedia,
-  ProjectManifest,
-  ProjectSummary,
-  TranscriptionModel,
-  Word,
+import {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  type JobProgress,
+  type PlaybackSource,
+  type PreparedMedia,
+  type ProjectManifest,
+  type ProjectSummary,
+  type TranscriptionModel,
+  type Word,
 } from "@rescript/core";
 import { getCutRanges, getKeepRanges } from "@rescript/core/edits";
 import HomeScreen from "./components/HomeScreen";
@@ -96,7 +97,9 @@ function isTerminal(progress: JobProgress): boolean {
 export default function App() {
   const [platform, setPlatform] = useState<PlatformInfo | null>(null);
   const [projects, setProjects] = useState<readonly ProjectSummary[]>([]);
-  const [homeModel, setHomeModel] = useState<TranscriptionModel>("base");
+  const [homeModel, setHomeModel] = useState<TranscriptionModel>(
+    DEFAULT_TRANSCRIPTION_MODEL
+  );
   const [homeBusy, setHomeBusy] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
   const manifest = useEditorStore((state) => state.manifest);
@@ -128,7 +131,7 @@ export default function App() {
       const saved = localStorage.getItem(MODEL_PREFERENCE_KEY);
       if (isTranscriptionModel(saved)) setHomeModel(saved);
     } catch {
-      // Keep the base default when local storage is unavailable.
+      // Keep the shared default when local storage is unavailable.
     }
     return useEditorStore.subscribe((state, previous) => {
       if (
@@ -251,7 +254,10 @@ export default function App() {
           if (!ownsOperation(token, project.id, running.jobId)) return;
           store.replaceTranscript(
             words,
-            persisted.model ?? (project.model === "import" ? "base" : project.model)
+            persisted.model ??
+              (project.model === "import"
+                ? DEFAULT_TRANSCRIPTION_MODEL
+                : project.model)
           );
           await flushProjectAutosave();
         }

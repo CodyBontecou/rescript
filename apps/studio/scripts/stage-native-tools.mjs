@@ -30,6 +30,7 @@ function validateFluidAudioCli(source, key) {
   const help = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
   const requiredFlags = [
     "--model-version",
+    "--model-dir",
     "--output-json",
     "--language",
     "--no-mel-context",

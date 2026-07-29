@@ -8,6 +8,7 @@ import {
   TRANSCRIPT_ACCEPT,
 } from "@/lib/parseTranscript";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   isTranscriptionModel,
   type TranscriptionModel,
 } from "@/lib/models";
@@ -42,7 +43,9 @@ export default function ImportTranscriptOption() {
     ModelOptionContextValue,
     "keepMenuOpen" | "closeMenu" | "select"
   > | null>(null);
-  const previousModelRef = useRef<TranscriptionModel>("base");
+  const previousModelRef = useRef<TranscriptionModel>(
+    DEFAULT_TRANSCRIPTION_MODEL
+  );
   const pickGenRef = useRef(0);
 
   /** Reset import-pick state only — never touch the dropdown open state. */

@@ -75,10 +75,10 @@ export default function HomeScreen({
               disabled={busy}
               aria-label="Default offline transcription model"
             >
+              <option value="parakeet-v2">Parakeet v2 · English · Default · ~465 MB</option>
+              <option value="parakeet-v3">Parakeet v3 · Multilingual · ~465 MB</option>
               <option value="base">Whisper Base · 148 MB</option>
               <option value="small">Whisper Small · 488 MB</option>
-              <option value="parakeet-v2">Parakeet v2 · English · ~465 MB</option>
-              <option value="parakeet-v3">Parakeet v3 · Multilingual · ~465 MB</option>
             </select>
           </div>
           {error ? <p className="error">{error}</p> : null}

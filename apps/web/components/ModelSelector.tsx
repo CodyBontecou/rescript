@@ -184,10 +184,10 @@ export default function ModelSelector({
   // Always mount options (hidden when closed) so custom triggers stay registered.
   const options = children ?? (
     <>
-      <ModelOption id="base" />
-      <ModelOption id="small" />
       <ModelOption id="parakeet-v2" />
       <ModelOption id="parakeet-v3" />
+      <ModelOption id="base" />
+      <ModelOption id="small" />
     </>
   );
 

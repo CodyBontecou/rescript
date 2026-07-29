@@ -237,7 +237,9 @@ impl TranscriptionJobManager {
             return Ok(());
         }
         let specification = parakeet_model_spec(model)?;
-        remove_directory_if_exists(&self.parakeet_model_directory(&specification))
+        // Never remove shared FluidAudio or Vox caches. Model removal owns only
+        // the copy downloaded below Rescript's app-data directory.
+        remove_directory_if_exists(&self.managed_parakeet_model_directory(&specification))
     }
 
     pub fn start(
@@ -479,7 +481,8 @@ impl TranscriptionJobManager {
     ) -> Result<Vec<Word>, TranscriptionError> {
         ensure_tool(&self.parakeet_cli, "fluidaudiocli")?;
         let specification = parakeet_model_spec(request.model)?;
-        let model_ready = self.parakeet_model_is_ready(&specification);
+        let model_directory = self.ready_parakeet_model_directory(&specification);
+        let model_ready = model_directory.is_some();
         self.update(
             app,
             record,
@@ -507,7 +510,6 @@ impl TranscriptionJobManager {
         remove_if_exists(&output_json)?;
         remove_if_exists(&progress_log)?;
 
-        fs::create_dir_all(self.parakeet_home())?;
         let stdout = File::create(&progress_log)?;
         let stderr = stdout.try_clone()?;
         let mut command = Command::new(&self.parakeet_cli);
@@ -527,11 +529,18 @@ impl TranscriptionJobManager {
         if let Some(language) = request.language.as_deref() {
             command.args(["--language", language]);
         }
+        if let Some(directory) = model_directory {
+            // Load an existing app-managed, standard FluidAudio, or Vox cache
+            // directly. The external caches remain read-only from Rescript's
+            // perspective and are never removed by model management.
+            command.arg("--model-dir").arg(directory);
+        } else {
+            // Keep first-use downloads app-scoped instead of writing into the
+            // user's shared FluidAudio cache.
+            fs::create_dir_all(self.parakeet_home())?;
+            command.env("HOME", self.parakeet_home());
+        }
         let child = command
-            // FluidAudio resolves its cache below $HOME/Library/Application
-            // Support. Give the child an app-controlled HOME so model files do
-            // not escape Rescript's models directory.
-            .env("HOME", self.parakeet_home())
             .stdin(Stdio::null())
             .stdout(Stdio::from(stdout))
             .stderr(Stdio::from(stderr))
@@ -692,7 +701,7 @@ impl TranscriptionJobManager {
         self.models.join("parakeet")
     }
 
-    fn parakeet_model_directory(&self, specification: &ParakeetSpec) -> PathBuf {
+    fn managed_parakeet_model_directory(&self, specification: &ParakeetSpec) -> PathBuf {
         self.parakeet_home()
             .join("Library")
             .join("Application Support")
@@ -701,20 +710,51 @@ impl TranscriptionJobManager {
             .join(specification.folder_name)
     }
 
+    fn parakeet_model_directories(&self, specification: &ParakeetSpec) -> Vec<PathBuf> {
+        let mut directories = vec![self.managed_parakeet_model_directory(specification)];
+
+        if let Some(configured) = std::env::var_os("RESCRIPT_PARAKEET_MODEL_DIR") {
+            let configured = PathBuf::from(configured);
+            directories.push(
+                if configured.file_name().and_then(|name| name.to_str())
+                    == Some(specification.folder_name)
+                {
+                    configured
+                } else {
+                    configured.join(specification.folder_name)
+                },
+            );
+        }
+
+        if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
+            directories.push(
+                home.join("Library")
+                    .join("Application Support")
+                    .join("FluidAudio")
+                    .join("Models")
+                    .join(specification.folder_name),
+            );
+            directories.push(
+                home.join("Library")
+                    .join("Group Containers")
+                    .join("group.bontecou.Voxboard")
+                    .join("WhisperModels")
+                    .join(specification.folder_name),
+            );
+        }
+
+        directories.dedup();
+        directories
+    }
+
+    fn ready_parakeet_model_directory(&self, specification: &ParakeetSpec) -> Option<PathBuf> {
+        self.parakeet_model_directories(specification)
+            .into_iter()
+            .find(|directory| parakeet_directory_is_ready(directory, specification))
+    }
+
     fn parakeet_model_is_ready(&self, specification: &ParakeetSpec) -> bool {
-        let directory = self.parakeet_model_directory(specification);
-        let required = [
-            "Preprocessor.mlmodelc",
-            "Encoder.mlmodelc",
-            "Decoder.mlmodelc",
-            if specification.model == ModelChoice::ParakeetV3 {
-                "JointDecisionv3.mlmodelc"
-            } else {
-                "JointDecision.mlmodelc"
-            },
-            "parakeet_vocab.json",
-        ];
-        required.iter().all(|name| directory.join(name).exists())
+        self.ready_parakeet_model_directory(specification).is_some()
     }
 
     fn install_child(
@@ -859,6 +899,21 @@ fn parakeet_model_spec(model: ModelChoice) -> Result<ParakeetSpec, Transcription
         .ok_or_else(|| TranscriptionError::InvalidInput {
             message: "unknown native Parakeet model".into(),
         })
+}
+
+fn parakeet_directory_is_ready(directory: &Path, specification: &ParakeetSpec) -> bool {
+    let required = [
+        "Preprocessor.mlmodelc",
+        "Encoder.mlmodelc",
+        "Decoder.mlmodelc",
+        if specification.model == ModelChoice::ParakeetV3 {
+            "JointDecisionv3.mlmodelc"
+        } else {
+            "JointDecision.mlmodelc"
+        },
+        "parakeet_vocab.json",
+    ];
+    required.iter().all(|name| directory.join(name).exists())
 }
 
 fn whisper_tool(resource_dir: &Path) -> PathBuf {
@@ -1181,6 +1236,56 @@ mod tests {
         assert_eq!(words[1].text, "world.");
         assert!((words[0].start - 0.1).abs() < 0.001);
         assert!((words[1].end - 0.9).abs() < 0.001);
+    }
+
+    #[test]
+    fn recognizes_complete_parakeet_v2_directory() {
+        let specification = parakeet_model_spec(ModelChoice::ParakeetV2).unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        for name in [
+            "Preprocessor.mlmodelc",
+            "Encoder.mlmodelc",
+            "Decoder.mlmodelc",
+            "JointDecision.mlmodelc",
+        ] {
+            fs::create_dir_all(directory.path().join(name)).unwrap();
+        }
+        fs::write(directory.path().join("parakeet_vocab.json"), "{}").unwrap();
+
+        assert!(parakeet_directory_is_ready(
+            directory.path(),
+            &specification
+        ));
+        fs::remove_file(directory.path().join("parakeet_vocab.json")).unwrap();
+        assert!(!parakeet_directory_is_ready(
+            directory.path(),
+            &specification
+        ));
+    }
+
+    #[test]
+    fn requires_v3_joint_model_for_parakeet_v3() {
+        let specification = parakeet_model_spec(ModelChoice::ParakeetV3).unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        for name in [
+            "Preprocessor.mlmodelc",
+            "Encoder.mlmodelc",
+            "Decoder.mlmodelc",
+            "JointDecision.mlmodelc",
+        ] {
+            fs::create_dir_all(directory.path().join(name)).unwrap();
+        }
+        fs::write(directory.path().join("parakeet_vocab.json"), "{}").unwrap();
+
+        assert!(!parakeet_directory_is_ready(
+            directory.path(),
+            &specification
+        ));
+        fs::create_dir_all(directory.path().join("JointDecisionv3.mlmodelc")).unwrap();
+        assert!(parakeet_directory_is_ready(
+            directory.path(),
+            &specification
+        ));
     }
 
     #[test]

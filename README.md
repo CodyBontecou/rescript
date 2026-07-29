@@ -20,7 +20,7 @@ This repository now contains two clients:
 - Scene splits, explicit joins, clip deletion, edge trims, word timing handles, zoom
 - Playback synchronized to the transcript and automatically skipping cut ranges
 - Native media preparation and export with progress, cancellation, journals, and recovery
-- Native offline transcription with Whisper Base/Small and Parakeet v2/v3 models
+- Native offline transcription with Parakeet v2 (the default), Parakeet v3, and Whisper Base/Small
 - On-device iOS speaker diarization with Argmax SpeakerKit/Pyannote
 - Responsive macOS and iPhone editor using the same React and Effect workflows
 - Reduced waveform and word data over IPC; source media and PCM remain native
@@ -63,11 +63,15 @@ export RESCRIPT_FFMPEG=/path/to/ffmpeg
 export RESCRIPT_FFPROBE=/path/to/ffprobe
 export RESCRIPT_WHISPER_CLI=/path/to/whisper-cli
 export RESCRIPT_FLUIDAUDIO_CLI=/path/to/fluidaudiocli
+# Optional parent or exact v2 model directory
+export RESCRIPT_PARAKEET_MODEL_DIR=/path/to/WhisperModels
 
 npm run dev:studio
 ```
 
-Without overrides, desktop development also checks `resources/bin`, Homebrew locations, and `PATH`. Build the matching Parakeet sidecar from the same FluidAudio revision used by iOS:
+Without tool overrides, desktop development also checks `resources/bin`, Homebrew locations, and `PATH`. Parakeet model lookup checks Rescript's app cache, `RESCRIPT_PARAKEET_MODEL_DIR`, FluidAudio's standard cache, and Vox.md's `group.bontecou.Voxboard/WhisperModels` cache in that order. Shared caches are loaded in place and never removed by Rescript.
+
+Build the matching Parakeet sidecar from the same FluidAudio revision used by iOS:
 
 ```bash
 git clone https://github.com/FluidInference/FluidAudio.git /tmp/FluidAudio
@@ -115,7 +119,7 @@ apps/studio/src-tauri/gen/apple/build/arm64-sim/Rescript.app
 ### macOS
 
 - FFmpeg/ffprobe decode project media into a project-local mono 16 kHz WAV and 100 Hz peak waveform.
-- `whisper-cli` produces timestamped words with verified GGML Base/Small models; `fluidaudiocli` runs Parakeet v2/v3 through FluidAudio/Core ML on Apple silicon.
+- `fluidaudiocli` runs the default Parakeet v2 model (and optional v3) through FluidAudio/Core ML on Apple silicon, reusing compatible FluidAudio or Vox.md caches when present; `whisper-cli` remains available for verified GGML Base/Small models.
 - FFmpeg exports ordered keep ranges to M4A or MP4.
 
 ### iOS
@@ -124,7 +128,7 @@ apps/studio/src-tauri/gen/apple/build/arm64-sim/Rescript.app
 - [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) 1.0.0 handles Whisper; pinned [FluidAudio](https://github.com/FluidInference/FluidAudio) handles Parakeet v2/v3. Both produce word timestamps.
 - SpeakerKit performs Pyannote diarization and assigns speaker IDs. Speaker attribution is best-effort and skipped for prepared WAVs over 120 MiB to control mobile memory use.
 
-Whisper and speaker models download on first use, are cached under app-controlled storage, and can be used offline afterward. Media and transcript content are never uploaded.
+Missing transcription and speaker models download on first use, are cached under app-controlled storage, and can be used offline afterward. On macOS, compatible pre-existing Parakeet caches can be reused read-only. Media and transcript content are never uploaded.
 
 ## Project and security model
 
@@ -138,7 +142,7 @@ Projects live under the app data directory as `projects/<uuid>/` and contain an 
 
 ## Web app
 
-The browser app remains a static, offline-capable Next.js client using transformers.js for Whisper, Parakeet.js for Parakeet v2/v3, pyannote ONNX, IndexedDB, and ffmpeg.wasm.
+The browser app remains a static, offline-capable Next.js client using Parakeet.js (v2 is the default), transformers.js for optional Whisper models, pyannote ONNX, IndexedDB, and ffmpeg.wasm.
 
 ```bash
 npm run dev:web

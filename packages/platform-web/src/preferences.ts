@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   Preferences,
   PreferencesError,
   type ModelChoice,
@@ -33,7 +34,7 @@ const service: PreferencesService = {
   loadModel: Effect.try({
     try: () => {
       const value = localStorage.getItem(MODEL_KEY);
-      return isModelChoice(value) ? value : "base";
+      return isModelChoice(value) ? value : DEFAULT_TRANSCRIPTION_MODEL;
     },
     catch: (cause) => preferencesError("load", cause),
   }),

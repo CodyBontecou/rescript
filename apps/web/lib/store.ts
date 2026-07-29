@@ -15,6 +15,7 @@ import {
 } from "@rescript/core/commands";
 import type { EditorDocument } from "@rescript/core";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   isModelChoice,
   isTranscriptionModel,
   loadModelPreference,
@@ -92,7 +93,7 @@ interface EditorState {
   exportOpen: boolean;
 
   // Actions
-  /** Load media for editing. Pass `words` to skip Whisper and use that transcript. */
+  /** Load media for editing. Pass `words` to skip local ASR and use that transcript. */
   loadVideo: (file: File, options?: { words?: Word[] }) => void;
   /** Restore a saved project from IndexedDB (no re-transcription). */
   openProject: (id: string) => Promise<void>;
@@ -262,7 +263,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   mediaKind: null,
   duration: 0,
   audio: null,
-  model: "base",
+  model: DEFAULT_TRANSCRIPTION_MODEL,
   pendingTranscript: null,
   projectId: null,
   skipTranscription: false,
@@ -304,7 +305,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       mediaKind: kind,
       projectId: null,
       skipTranscription: Boolean(imported),
-      model: imported ? "import" : isTranscriptionModel(current) ? current : "base",
+      model:
+        imported
+          ? "import"
+          : isTranscriptionModel(current)
+            ? current
+            : DEFAULT_TRANSCRIPTION_MODEL,
       pendingTranscript: null,
       status: "preparing",
       progress: {
@@ -342,7 +348,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       mediaUrl: URL.createObjectURL(file),
       mediaKind: record.mediaKind,
       duration: record.duration,
-      model: isModelChoice(record.model) ? record.model : "base",
+      model: isModelChoice(record.model)
+        ? record.model
+        : DEFAULT_TRANSCRIPTION_MODEL,
       projectId: record.id,
       skipTranscription: true,
       pendingTranscript: null,

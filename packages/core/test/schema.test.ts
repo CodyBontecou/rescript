@@ -1,6 +1,9 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
-import { decodeProjectManifest } from "../src/schema";
+import {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  decodeProjectManifest,
+} from "../src/schema";
 
 function manifest() {
   return {
@@ -36,6 +39,10 @@ function manifest() {
 }
 
 describe("project manifest schema", () => {
+  it("uses Parakeet v2 as the shared transcription default", () => {
+    expect(DEFAULT_TRANSCRIPTION_MODEL).toBe("parakeet-v2");
+  });
+
   it("decodes a valid versioned project", async () => {
     const decoded = await Effect.runPromise(decodeProjectManifest(manifest()));
     expect(decoded.id).toBe("project-1");

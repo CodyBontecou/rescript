@@ -1,0 +1,198 @@
+=================================================================
+13:12:37 PROCESS MANAGER STARTED
+=================================================================
+13:12:37 web	| 'npm run dev:app' started with pid 40420
+13:12:37 web	| 
+13:12:37 web	| > rescript@0.1.0 dev:app
+13:12:37 web	| > next dev
+13:12:37 web	| 
+13:12:38 web	| ⨯ Failed to start server
+13:12:38 web	| Error: listen EADDRINUSE: address already in use :::5000
+13:12:38 web	|     at <unknown> (Error: listen EADDRINUSE: address already in use :::5000)
+13:12:38 web	|     at new Promise (<anonymous>) {
+13:12:38 web	|   code: 'EADDRINUSE',
+13:12:38 web	|   errno: -48,
+13:12:38 web	|   syscall: 'listen',
+13:12:38 web	|   address: '::',
+13:12:38 web	|   port: 5000
+13:12:38 web	| }
+13:12:38 web	| [?25h
+=================================================================
+13:13:53 PROCESS MANAGER STARTED
+=================================================================
+13:13:53 web	| 'npm run dev:app -- --hostname 127.0.0.1 --port 3001' started with pid 41619
+13:13:53 web	| 
+13:13:53 web	| > rescript@0.1.0 dev:app
+13:13:53 web	| > next dev --hostname 127.0.0.1 --port 3001
+13:13:53 web	| 
+13:13:54 web	| ▲ Next.js 16.2.12 (Turbopack)
+13:13:54 web	| - Local:         http://127.0.0.1:3001
+13:13:54 web	| - Network:       http://127.0.0.1:3001
+13:13:54 web	| ✓ Ready in 318ms
+13:13:54 web	| ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+13:13:54 web	|  We detected multiple lockfiles and selected the directory of /Users/codybontecou/package-lock.json as the root directory.
+13:13:54 web	|  To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+13:13:54 web	|    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+13:13:54 web	|  Detected additional lockfiles: 
+13:13:54 web	|    * /Users/codybontecou/dev/rescript/package-lock.json
+13:13:54 web	| 
+=================================================================
+13:14:42 PROCESS MANAGER STARTED
+=================================================================
+13:14:42 web	| 'npm run dev:app -- --hostname 127.0.0.1 --port 3001' started with pid 42465
+13:14:42 web	| 
+13:14:42 web	| > rescript@0.1.0 dev:app
+13:14:42 web	| > next dev --hostname 127.0.0.1 --port 3001
+13:14:42 web	| 
+13:14:42 web	| ▲ Next.js 16.2.12 (Turbopack)
+13:14:42 web	| - Local:         http://127.0.0.1:3001
+13:14:42 web	| - Network:       http://127.0.0.1:3001
+13:14:42 web	| ✓ Ready in 222ms
+13:14:42 web	| ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+13:14:42 web	|  We detected multiple lockfiles and selected the directory of /Users/codybontecou/package-lock.json as the root directory.
+13:14:42 web	|  To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+13:14:42 web	|    See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+13:14:42 web	|  Detected additional lockfiles: 
+13:14:42 web	|    * /Users/codybontecou/dev/rescript/package-lock.json
+13:14:42 web	| 
+13:14:43 web	| 
+13:14:54 web	| ○ Compiling / ...
+13:15:44 web	|  GET / 200 in 4.8s (next.js: 4.6s, application-code: 159ms)
+13:15:51 web	|  GET / 200 in 321ms (next.js: 40ms, application-code: 281ms)
+13:15:52 web	|  GET /coi-serviceworker.js 404 in 1015ms (next.js: 954ms, application-code: 61ms)
+13:15:57 web	| ✓ Finished writing to filesystem cache in 11.0s
+13:16:08 web	|  GET /vendor/ffmpeg/ffmpeg-core.js 404 in 28ms (next.js: 3ms, application-code: 26ms)
+13:16:08 web	|  GET /vendor/ffmpeg/ffmpeg-core.wasm 404 in 46ms (next.js: 5ms, application-code: 40ms)
+13:16:08 web	|  GET /vendor/ffmpeg/ffmpeg-core.worker.js 404 in 21ms (next.js: 1547µs, application-code: 19ms)
+13:16:08 web	|  GET /vendor/ffmpeg-class/worker.js 404 in 25ms (next.js: 2ms, application-code: 23ms)
+13:19:50 web	|  GET / 200 in 24ms (next.js: 1922µs, application-code: 22ms)
+13:19:50 web	|  GET /coi-serviceworker.js 404 in 48ms (next.js: 2ms, application-code: 46ms)
+13:20:35 web	|  GET /vendor/ffmpeg/ffmpeg-core.js 404 in 34ms (next.js: 3ms, application-code: 31ms)
+13:20:35 web	|  GET /vendor/ffmpeg/ffmpeg-core.wasm 404 in 32ms (next.js: 3ms, application-code: 29ms)
+13:20:35 web	|  GET /vendor/ffmpeg/ffmpeg-core.worker.js 404 in 18ms (next.js: 1448µs, application-code: 17ms)
+13:20:35 web	|  GET /vendor/ffmpeg-class/worker.js 404 in 20ms (next.js: 1732µs, application-code: 18ms)
+13:24:21 web	|  GET / 200 in 22ms (next.js: 1434µs, application-code: 21ms)
+13:25:00 web	|  HEAD / 200 in 19ms (next.js: 1372µs, application-code: 18ms)
+13:30:57 web	|  GET / 200 in 23ms (next.js: 1638µs, application-code: 21ms)
+13:31:55 web	| [browser] Processing pipeline failed: Error: File could not be read! Code=-1 (components/Editor.tsx:70:17)
+13:32:00 web	|  GET / 200 in 35ms (next.js: 6ms, application-code: 30ms)
+13:32:03 web	| [browser] Processing pipeline failed: Error: File could not be read! Code=-1 (components/Editor.tsx:70:17)
+13:32:55 web	|  HEAD / 200 in 18ms (next.js: 1119µs, application-code: 17ms)
+13:39:33 web	| ✓ Compiled in 7.1s
+13:39:51 web	|  GET / 200 in 34ms (next.js: 3ms, application-code: 31ms)
+13:43:43 web	| ✓ Compiled in 6s
+13:43:44 web	| ✓ Finished writing to filesystem cache in 11.9s
+13:46:08 web	| [browser] Unexpected import of module [project]/dev/rescript/lib/autosave.ts [app-client] (ecmascript, async loader) from module [project]/dev/rescript/components/Editor.tsx [app-client] (ecmascript), which was deleted by an HMR update (components/Editor.tsx:91:20)
+13:46:08 web	| [browser] Unexpected import of module [project]/dev/rescript/lib/autosave.ts [app-client] (ecmascript) from module [project]/dev/rescript/components/Editor.tsx [app-client] (ecmascript), which was deleted by an HMR update (.next/dev/static/chunks/dev_rescript_134b33m._.js:10:16)
+13:46:09 web	|  GET / 200 in 46ms (next.js: 7ms, application-code: 40ms)
+13:52:19 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| ⨯ unhandledRejection: Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| ⨯ unhandledRejection:  Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:19 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	|     at ignore-listed frames {
+13:52:19 web	|   errno: -2,
+13:52:19 web	|   code: 'ENOENT',
+13:52:19 web	|   syscall: 'scandir',
+13:52:19 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:19 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:20 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	|     at ignore-listed frames {
+13:52:20 web	|   errno: -2,
+13:52:20 web	|   code: 'ENOENT',
+13:52:20 web	|   syscall: 'scandir',
+13:52:20 web	|   path: '/Users/codybontecou/dev/rescript/app'
+13:52:20 web	| }
+13:52:24 web	| ✓ Compiled in 5.5s
+13:52:42 web	| ✓ Finished writing to filesystem cache in 16.3s
+13:52:58 web	| ✓ Finished filesystem cache database compaction in 15.7s
+13:53:14 web	| ✓ Finished filesystem cache database compaction in 16.9s
+13:53:44 web	| ✓ Finished filesystem cache database compaction in 29.8s
+13:53:55 web	| ✓ Finished filesystem cache database compaction in 10.7s
+14:01:16 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+14:01:16 web	|     at ignore-listed frames {
+14:01:16 web	|   errno: -2,
+14:01:16 web	|   code: 'ENOENT',
+14:01:16 web	|   syscall: 'scandir',
+14:01:16 web	|   path: '/Users/codybontecou/dev/rescript/app'
+14:01:16 web	| }
+14:01:16 web	| Error: ENOENT: no such file or directory, scandir '/Users/codybontecou/dev/rescript/app'
+14:01:16 web	|     at ignore-listed frames {
+14:01:16 web	|   errno: -2,
+14:01:16 web	|   code: 'ENOENT',
+14:01:16 web	|   syscall: 'scandir',
+14:01:16 web	|   path: '/Users/codybontecou/dev/rescript/app'
+14:01:16 web	| }

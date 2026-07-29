@@ -267,10 +267,10 @@ export default function UploadScreen({
             <p className="ml-2 text-[15px] font-medium text-zinc-800">Rescript</p>
           </div>
           <ModelSelector groupLabel="Transcript source">
-            <ModelOption id="base" />
-            <ModelOption id="small" />
             <ModelOption id="parakeet-v2" />
             <ModelOption id="parakeet-v3" />
+            <ModelOption id="base" />
+            <ModelOption id="small" />
             <ModelOptionSeparator />
             <ImportTranscriptOption />
           </ModelSelector>

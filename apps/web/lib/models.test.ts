@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   MODELS,
   PARAKEET_MODELS,
   TRANSCRIPTION_MODEL_ORDER,
   isModelChoice,
   isParakeetModel,
   isTranscriptionModel,
+  loadModelPreference,
 } from "./models";
 
 describe("transcription models", () => {
+  it("defaults new sessions to Parakeet v2", () => {
+    expect(DEFAULT_TRANSCRIPTION_MODEL).toBe("parakeet-v2");
+    expect(loadModelPreference()).toBe("parakeet-v2");
+  });
+
   it("offers Parakeet v2 and v3 in the model catalog", () => {
     expect(TRANSCRIPTION_MODEL_ORDER).toEqual([
       "base",

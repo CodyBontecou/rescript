@@ -1,10 +1,12 @@
-import type {
-  ModelChoice,
-  ParakeetModel,
-  TranscriptionModel,
-  WhisperModel,
+import {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  type ModelChoice,
+  type ParakeetModel,
+  type TranscriptionModel,
+  type WhisperModel,
 } from "@rescript/core";
 
+export { DEFAULT_TRANSCRIPTION_MODEL } from "@rescript/core";
 export type {
   ModelChoice,
   ParakeetModel,
@@ -123,9 +125,9 @@ export function isModelChoice(value: unknown): value is ModelChoice {
 
 const MODEL_STORAGE_KEY = "rescript.model";
 
-/** Read the last-selected local speech model from localStorage (defaults to base). */
+/** Read the last-selected local speech model from localStorage. */
 export function loadModelPreference(): TranscriptionModel {
-  if (typeof window === "undefined") return "base";
+  if (typeof window === "undefined") return DEFAULT_TRANSCRIPTION_MODEL;
   try {
     const raw = window.localStorage.getItem(MODEL_STORAGE_KEY);
     // Ignore a stale "import" preference — that choice is session-only until a
@@ -134,7 +136,7 @@ export function loadModelPreference(): TranscriptionModel {
   } catch {
     // private mode / disabled storage
   }
-  return "base";
+  return DEFAULT_TRANSCRIPTION_MODEL;
 }
 
 /** Persist the selected speech model for the next visit. */

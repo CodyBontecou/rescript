@@ -39,6 +39,11 @@ describe("Studio editor store", () => {
     useEditorStore.getState().loadProject(manifest);
   });
 
+  it("defaults an empty editor to Parakeet v2", () => {
+    useEditorStore.getState().reset();
+    expect(useEditorStore.getState().model).toBe("parakeet-v2");
+  });
+
   it("applies commands with undo and redo history", () => {
     const store = useEditorStore.getState();
     store.deleteWords([2]);

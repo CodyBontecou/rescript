@@ -70,10 +70,10 @@ export default function TopBar({
           aria-label="Offline transcription model"
           className="editor-model-select"
         >
+          <option value="parakeet-v2">Parakeet v2 · English · Default</option>
+          <option value="parakeet-v3">Parakeet v3 · Multilingual</option>
           <option value="base">Whisper Base</option>
           <option value="small">Whisper Small</option>
-          <option value="parakeet-v2">Parakeet v2 · English</option>
-          <option value="parakeet-v3">Parakeet v3 · Multilingual</option>
         </select>
         <button
           type="button"

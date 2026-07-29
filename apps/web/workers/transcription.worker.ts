@@ -2,8 +2,8 @@
  * Transcription worker: runs entirely in the browser.
  *
  * 1. Silero VAD (energy fallback) finds speech segments; silence is skipped.
- * 2. A Whisper-family model (see lib/models.ts) transcribes each segment with
- *    per-word timestamps, remapped onto the original timeline.
+ * 2. Parakeet (default) or Whisper (see lib/models.ts) transcribes each segment
+ *    with per-word timestamps remapped onto the original timeline.
  * 3. Pyannote segmentation 3.0 assigns a speaker to each word.
  *
  * Models are fetched from the Hugging Face Hub on first use and cached in the
@@ -23,6 +23,7 @@ import {
 import type { ParakeetModel as ParakeetRuntime } from "parakeet.js";
 import type { Word, WorkerRequest, WorkerResponse } from "@/lib/types";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   PARAKEET_MODELS,
   WHISPER_MODELS,
   isParakeetModel,
@@ -460,8 +461,8 @@ async function transcribeWithParakeet(
 }
 
 /**
- * Load the diarization model. Started in the background while Whisper is
- * still transcribing, so the (small) speaker model is downloaded, cached,
+ * Load the diarization model. Started in the background while ASR is still
+ * transcribing, so the (small) speaker model is downloaded, cached,
  * and ready by the time the transcript lands — closing the tab right after
  * transcription no longer leaves it uncached for the next session. No
  * progress is posted here to avoid interleaving with transcription progress.
@@ -549,7 +550,7 @@ async function completeTranscript(rawWords: Word[], audio: Float32Array) {
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const { audio, duration, model, language } = event.data;
   try {
-    const choice: TranscriptionModel = model ?? "base";
+    const choice: TranscriptionModel = model ?? DEFAULT_TRANSCRIPTION_MODEL;
 
     // Overlap ASR + Silero downloads; diarizer warms in the background.
     getDiarizer().catch(() => {});

@@ -45,6 +45,7 @@ export type MediaKind = "video" | "audio";
 export type WhisperModel = "base" | "small";
 export type ParakeetModel = "parakeet-v2" | "parakeet-v3";
 export type TranscriptionModel = WhisperModel | ParakeetModel;
+export const DEFAULT_TRANSCRIPTION_MODEL: TranscriptionModel = "parakeet-v2";
 export type ModelChoice = TranscriptionModel | "import";
 export type ModelAvailability = "missing" | "ready";
 
