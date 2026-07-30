@@ -1,0 +1,12 @@
+diff --git a/node_modules/parakeet.js/src/backend.js b/node_modules/parakeet.js/src/backend.js
+index f842219..d69e0d3 100644
+--- a/node_modules/parakeet.js/src/backend.js
++++ b/node_modules/parakeet.js/src/backend.js
+@@ -53,2 +53,5 @@
+-  // Set up WASM paths first (needed for all backends)
+-  if (!ort.env.wasm.wasmPaths) {
++  // Set up WASM paths first (needed for all backends).
++  // Prefer the caller's explicit self-hosted path so apps can work offline.
++  if (wasmPaths) {
++    ort.env.wasm.wasmPaths = wasmPaths;
++  } else if (!ort.env.wasm.wasmPaths) {

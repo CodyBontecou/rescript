@@ -13,6 +13,11 @@
 # testing
 /coverage
 
+# agent-local state and artifacts from the separate Tauri worktree
+/.pi/
+/apps/
+/dev.log
+
 # next.js
 /.next/
 /out/

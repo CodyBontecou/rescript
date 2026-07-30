@@ -18,7 +18,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const title = "Rescript — edit videos like you edit text";
 const description =
-  "A fully offline, open-source transcript-based video editor. Transcribe with Whisper, cut by deleting words, export with ffmpeg — all in your browser.";
+  "A fully offline, open-source transcript-based video editor. Transcribe with Parakeet or Whisper, cut by deleting words, and export with ffmpeg — all in your browser.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://wassgha.github.io"),

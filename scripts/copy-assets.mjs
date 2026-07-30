@@ -5,7 +5,14 @@
  *   - onnxruntime-web  -> public/vendor/ort/     (transformers.js inference)
  * Runs automatically on `npm install` (postinstall).
  */
-import { cpSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -39,6 +46,22 @@ for (const f of readdirSync(ortSrc)) {
   }
 }
 
+// parakeet.js pins its own ONNX Runtime release. Keep those matching WASM
+// binaries separate: mixing ORT JavaScript and WASM versions breaks decoder
+// session initialization.
+const nestedParakeetOrt = join(
+  root,
+  "node_modules/parakeet.js/node_modules/onnxruntime-web/dist"
+);
+const parakeetOrtSrc = existsSync(nestedParakeetOrt) ? nestedParakeetOrt : ortSrc;
+const parakeetOrtDst = join(root, "public/vendor/parakeet-ort");
+mkdirSync(parakeetOrtDst, { recursive: true });
+for (const f of readdirSync(parakeetOrtSrc)) {
+  if (/^ort-wasm-simd-threaded.*\.(wasm|mjs)$/.test(f)) {
+    cpSync(join(parakeetOrtSrc, f), join(parakeetOrtDst, f));
+  }
+}
+
 // coi-serviceworker provides COOP/COEP headers on static hosts (GitHub Pages)
 // that can't send them, keeping cross-origin isolation for SharedArrayBuffer.
 // A config prelude is prepended: always use COEP "credentialless" (needed for
@@ -57,4 +80,6 @@ writeFileSync(
   coiPrelude + readFileSync(coiSrc, "utf8")
 );
 
-console.log("[copy-assets] ffmpeg core + onnxruntime wasm + coi-serviceworker copied to public/");
+console.log(
+  "[copy-assets] ffmpeg core + transformers/parakeet ONNX WASM + coi-serviceworker copied to public/"
+);

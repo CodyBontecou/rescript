@@ -2,8 +2,8 @@
  * Transcription worker: runs entirely in the browser.
  *
  * 1. Silero VAD (energy fallback) finds speech segments; silence is skipped.
- * 2. A Whisper-family model (see lib/models.ts) transcribes each segment with
- *    per-word timestamps, remapped onto the original timeline.
+ * 2. Parakeet (default) or Whisper (see lib/models.ts) transcribes each segment
+ *    with per-word timestamps remapped onto the original timeline.
  * 3. Pyannote segmentation 3.0 assigns a speaker to each word.
  *
  * Models are fetched from the Hugging Face Hub on first use and cached in the
@@ -20,9 +20,22 @@ import {
   env,
   type AutomaticSpeechRecognitionPipeline,
 } from "@huggingface/transformers";
+import type { ParakeetModel as ParakeetRuntime } from "parakeet.js";
 import type { Word, WorkerRequest, WorkerResponse } from "@/lib/types";
-import { MODELS, type WhisperModel } from "@/lib/models";
+import {
+  DEFAULT_TRANSCRIPTION_MODEL,
+  PARAKEET_MODELS,
+  WHISPER_MODELS,
+  isParakeetModel,
+  type ParakeetModel,
+  type TranscriptionModel,
+  type WhisperModel,
+} from "@/lib/models";
 import { cleanTranscript } from "@/lib/hallucinations";
+import {
+  wordsFromParakeet,
+  type ParakeetTimedWord,
+} from "@/lib/parakeet";
 import {
   VAD_FRAME_SIZE,
   VAD_SAMPLE_RATE,
@@ -141,7 +154,7 @@ async function pickDevice(): Promise<"webgpu" | "wasm"> {
 // Keyed by model id so choices that share weights reuse one pipeline.
 const asrPromises = new Map<string, Promise<AutomaticSpeechRecognitionPipeline>>();
 async function getAsr(choice: WhisperModel) {
-  const { id, dtype } = MODELS[choice];
+  const { id, dtype } = WHISPER_MODELS[choice];
   let promise = asrPromises.get(id);
   if (!promise) {
     const device = await pickDevice();
@@ -165,6 +178,70 @@ async function getAsr(choice: WhisperModel) {
     }) as Promise<AutomaticSpeechRecognitionPipeline>;
     asrPromises.set(id, promise);
     promise.catch(() => asrPromises.delete(id));
+  }
+  return promise;
+}
+
+const parakeetPromises = new Map<string, Promise<ParakeetRuntime>>();
+
+function makeParakeetDownloadTracker(label: string) {
+  const files = new Map<string, { loaded: number; total: number }>();
+  return (progress: { loaded: number; total: number; file: string }) => {
+    files.set(progress.file, {
+      loaded: progress.loaded,
+      total: progress.total,
+    });
+    let loaded = 0;
+    let total = 0;
+    for (const file of files.values()) {
+      loaded += file.loaded;
+      total += file.total;
+    }
+    post({
+      type: "progress",
+      message: label,
+      value: total > 0 ? Math.min(1, loaded / total) : null,
+    });
+  };
+}
+
+async function getParakeetAsr(choice: ParakeetModel): Promise<ParakeetRuntime> {
+  const { id, label } = PARAKEET_MODELS[choice];
+  let promise = parakeetPromises.get(id);
+  if (!promise) {
+    promise = (async () => {
+      const { fromHub } = await import("parakeet.js");
+      const device = await pickDevice();
+      const wasmPaths = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/vendor/parakeet-ort/`;
+      const progress = makeParakeetDownloadTracker(`Loading ${label}…`);
+      if (device === "webgpu") {
+        try {
+          return await fromHub(id, {
+            // parakeet.js 1.4.x only assigns the WebGPU execution provider
+            // for its explicit hybrid mode; the plain "webgpu" alias leaves
+            // the provider list empty.
+            backend: "webgpu-hybrid",
+            encoderQuant: "fp16",
+            decoderQuant: "int8",
+            preprocessorBackend: "js",
+            wasmPaths,
+            progress,
+          });
+        } catch (error) {
+          console.warn("Parakeet WebGPU initialization failed; retrying with WASM.", error);
+        }
+      }
+      return fromHub(id, {
+        backend: "wasm",
+        encoderQuant: "int8",
+        decoderQuant: "int8",
+        preprocessorBackend: "js",
+        wasmPaths,
+        progress,
+      });
+    })();
+    parakeetPromises.set(id, promise);
+    promise.catch(() => parakeetPromises.delete(id));
   }
   return promise;
 }
@@ -345,8 +422,49 @@ function wordsFromChunks(
   return words;
 }
 
+async function transcribeWithParakeet(
+  transcriber: ParakeetRuntime,
+  audio: Float32Array,
+  duration: number,
+  speechSegments: SpeechSegment[]
+): Promise<Word[]> {
+  const speechSamples = speechSegments.reduce(
+    (total, segment) => total + segment.endSample - segment.startSample,
+    0
+  );
+  let speechDone = 0;
+  let partial = "";
+  const words: Word[] = [];
+  post({ type: "progress", message: "Transcribing with Parakeet…", value: 0 });
+
+  for (const segment of speechSegments) {
+    const slice = audio.slice(segment.startSample, segment.endSample);
+    const result = await transcriber.transcribeLongAudio(slice, VAD_SAMPLE_RATE, {
+      returnTimestamps: "word",
+      enableProfiling: false,
+    });
+    const segmentWords = wordsFromParakeet(
+      (result.words ?? []) as ParakeetTimedWord[],
+      segment.startSample / VAD_SAMPLE_RATE,
+      duration,
+      words.length
+    );
+    words.push(...segmentWords);
+    partial = [partial, result.text.trim()].filter(Boolean).join(" ");
+    post({ type: "partial", text: partial });
+    speechDone += segment.endSample - segment.startSample;
+    post({
+      type: "progress",
+      message: "Transcribing with Parakeet…",
+      value: speechSamples > 0 ? Math.min(1, speechDone / speechSamples) : 1,
+    });
+  }
+
+  return words.map((word, id) => ({ ...word, id }));
+}
+
 /**
- * Load the diarization model. Started in the background while Whisper is
+ * Load the diarization model. Started in the background while ASR is
  * still transcribing, so the (small) speaker model is downloaded, cached,
  * and ready by the time the transcript lands — closing the tab right after
  * transcription no longer leaves it uncached for the next session. No
@@ -415,19 +533,58 @@ function assignSpeakers(words: Word[], segments: DiarizationSegment[]) {
   }
 }
 
+async function completeTranscript(rawWords: Word[], audio: Float32Array) {
+  // Post-process: collapse leftover n-gram loops and drop known hallucination
+  // phrases ("I'm sorry", "thanks for watching", …) that slip past decoding.
+  const words = cleanTranscript(rawWords);
+
+  // Best-effort speaker diarization; a failure should not lose the transcript.
+  try {
+    post({ type: "progress", message: "Identifying speakers…", value: null });
+    const segments = await diarize(audio);
+    assignSpeakers(words, segments);
+  } catch (err) {
+    console.warn("Speaker diarization failed; using a single speaker.", err);
+  }
+
+  post({ type: "complete", words });
+}
+
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const { audio, duration, model, language } = event.data;
   try {
-    const choice: WhisperModel = model ?? "base";
+    const choice: TranscriptionModel = model ?? DEFAULT_TRANSCRIPTION_MODEL;
 
-    // Overlap Whisper + Silero downloads; diarizer warms in the background.
+    // Overlap ASR + Silero downloads; diarizer warms in the background.
     getDiarizer().catch(() => {});
-    const [transcriber, vad] = await Promise.all([getAsr(choice), getVad()]);
+
+    if (isParakeetModel(choice)) {
+      const [transcriber, vad] = await Promise.all([
+        getParakeetAsr(choice),
+        getVad(),
+      ]);
+      post({ type: "progress", message: "Detecting speech…", value: 0 });
+      const speechSegments = await detectSpeechSegments(audio, vad);
+      const rawWords = await transcribeWithParakeet(
+        transcriber,
+        audio,
+        duration,
+        speechSegments
+      );
+      await completeTranscript(rawWords, audio);
+      return;
+    }
+
+    const whisperChoice: WhisperModel = choice;
+    const [transcriber, vad] = await Promise.all([
+      getAsr(whisperChoice),
+      getVad(),
+    ]);
 
     post({ type: "progress", message: "Detecting speech…", value: 0 });
     const speechSegments = await detectSpeechSegments(audio, vad);
 
-    const { verbatimPrompt } = MODELS[choice];
+    const { verbatimPrompt } = WHISPER_MODELS[whisperChoice];
     const promptedIds = verbatimPrompt
       ? buildPromptedDecoderIds(transcriber, verbatimPrompt, language ?? "en")
       : null;
@@ -556,20 +713,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       reportProgress(0, 0);
     }
 
-    // Post-process: collapse leftover n-gram loops and drop known hallucination
-    // phrases ("I'm sorry", "thanks for watching", …) that slip past decoding.
-    const words = cleanTranscript(rawWords);
-
-    // Best-effort speaker diarization; a failure should not lose the transcript.
-    try {
-      post({ type: "progress", message: "Identifying speakers…", value: null });
-      const segments = await diarize(audio);
-      assignSpeakers(words, segments);
-    } catch (err) {
-      console.warn("Speaker diarization failed; using a single speaker.", err);
-    }
-
-    post({ type: "complete", words });
+    await completeTranscript(rawWords, audio);
   } catch (err) {
     console.error(err);
     post({

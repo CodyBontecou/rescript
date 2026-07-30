@@ -20,8 +20,8 @@ browser, with no server, no auth, and no API calls.
 │                                                                    │
 │  ┌──────────────────────────┐   ┌───────────────────────────────┐  │
 │  │ Web Worker                │   │ ffmpeg.wasm (multi-threaded)  │  │
-│  │ transformers.js           │   │ - audio extraction (16k PCM)  │  │
-│  │ - Whisper (word timing)   │   │ - export: trim+concat+encode  │  │
+│  │ parakeet.js / transformers│   │ - audio extraction (16k PCM)  │  │
+│  │ - ASR (word timing)       │   │ - export: trim+concat+encode  │  │
 │  │ - pyannote (diarization)  │   └───────────────────────────────┘  │
 │  └──────────────────────────┘                                       │
 └────────────────────────────────────────────────────────────────────┘
@@ -55,12 +55,11 @@ Everything else is derived:
 1. **Upload** — a single video file; object URL feeds the `<video>` preview
    immediately.
 2. **Audio extraction** — ffmpeg.wasm decodes the audio track to mono 16 kHz
-   `f32le` PCM (Whisper's native input; also used to draw the waveform).
-3. **Transcription** — a Web Worker runs
-   `onnx-community/whisper-base_timestamped` via transformers.js with
-   `return_timestamps: "word"` (30 s chunks, 5 s stride), streaming partial text
-   and progress back to the UI. WebGPU is used when available, with a WASM
-   fallback.
+   `f32le` PCM (used by both ASR engines and to draw the waveform).
+3. **Transcription** — a Web Worker runs Parakeet TDT 0.6B v2 via parakeet.js
+   by default, with Whisper Base/Small via transformers.js still selectable.
+   Both paths produce word timestamps and stream partial text/progress back to
+   the UI. WebGPU is used when available, with a WASM fallback.
 4. **Diarization** — the same worker runs
    `onnx-community/pyannote-segmentation-3.0` and assigns each word the speaker
    whose segment contains the word's midpoint (nearest segment as fallback).
@@ -77,10 +76,11 @@ Everything else is derived:
 - **No server code at all** — the Next.js app is a static client bundle; there
   is no API route, no auth, no telemetry.
 - **WASM binaries served same-origin** — `postinstall` copies `@ffmpeg/core-mt`
-  and `onnxruntime-web` runtime files into `public/vendor/` (no CDN at runtime).
-- **Models** — fetched from the Hugging Face Hub on *first* use only
-  (~85 MB Whisper base + ~6 MB pyannote) and cached in browser Cache Storage;
-  every subsequent run works with the network fully disconnected.
+  and the matching transformers.js/parakeet.js ONNX Runtime files into
+  `public/vendor/` (no CDN at runtime).
+- **Models** — fetched from the Hugging Face Hub on *first* use only (Parakeet
+  v2 is ~1.3 GB with WebGPU weights; Whisper Base/Small remain smaller options)
+  and cached in browser storage; subsequent runs work fully disconnected.
 - **COOP/COEP headers** enable `SharedArrayBuffer` for multi-threaded ffmpeg and
   ONNX inference.
 
@@ -89,8 +89,8 @@ Everything else is derived:
 1. ✅ Scaffold Next.js (App Router, TypeScript, Tailwind), COOP/COEP headers,
    local WASM asset pipeline.
 2. ✅ Media ingest: upload screen, ffmpeg singleton, audio extraction.
-3. ✅ Transcription worker: Whisper word timestamps + pyannote diarization,
-   streamed progress/partial text.
+3. ✅ Transcription worker: Parakeet/Whisper word timestamps + pyannote
+   diarization, streamed progress/partial text.
 4. ✅ Editor UI: transcript panel (left), video preview (right), timeline with
    waveform, ruler, word labels, playhead, zoom (bottom).
 5. ✅ Editing core: word selection → cut/restore, undo/redo, playback that
@@ -101,7 +101,7 @@ Everything else is derived:
 
 ## Future work
 
-- Larger Whisper variants + language selection UI; local model import for
+- Language selection UI, more ASR variants, and local model import for
   air-gapped first runs.
 - Smarter export: stream-copy for keyframe-aligned segments, WebCodecs-based
   rendering for speed.

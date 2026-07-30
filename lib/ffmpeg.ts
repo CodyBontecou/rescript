@@ -56,8 +56,8 @@ async function ensureInput(ffmpeg: FFmpeg, file: File): Promise<string> {
 }
 
 /**
- * Extract the audio track as mono 16 kHz float PCM — the exact format
- * Whisper expects, and what we render the timeline waveform from.
+ * Extract the audio track as mono 16 kHz float PCM — the format used by
+ * Parakeet and Whisper, and what we render the timeline waveform from.
  * Works for both video and audio-only files.
  */
 export async function extractAudio(file: File): Promise<Float32Array> {

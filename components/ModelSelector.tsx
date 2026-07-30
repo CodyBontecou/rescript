@@ -18,7 +18,11 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { MODELS, isWhisperModel, type ModelChoice } from "@/lib/models";
+import {
+  MODELS,
+  isTranscriptionModel,
+  type ModelChoice,
+} from "@/lib/models";
 import { hydrateModelPreference, useEditorStore } from "@/lib/store";
 
 export type ModelOptionContextValue = {
@@ -86,7 +90,7 @@ export function useOptionTrigger(
 /**
  * Generic source / model dropdown. Pass option components as children
  * (`ModelOption`, or a custom option like `ImportTranscriptOption`).
- * With no children, renders the default Whisper Base / Small rows.
+ * With no children, renders every local speech-model row.
  *
  * Options stay mounted (hidden when closed) so custom triggers remain registered.
  */
@@ -171,7 +175,7 @@ export default function ModelSelector({
     activeTrigger?.icon ?? (model === "import" ? FileText : AudioLines);
   const triggerLabel =
     activeTrigger?.label ??
-    (isWhisperModel(model)
+    (isTranscriptionModel(model)
       ? MODELS[model].label
       : model === "import"
         ? "Import transcript"
@@ -180,6 +184,7 @@ export default function ModelSelector({
   // Always mount options (hidden when closed) so custom triggers stay registered.
   const options = children ?? (
     <>
+      <ModelOption id="parakeet-v2" />
       <ModelOption id="base" />
       <ModelOption id="small" />
     </>
@@ -233,7 +238,7 @@ export default function ModelSelector({
   );
 }
 
-/** Default option row: icon + label + optional meta. Whisper ids fill in from MODELS. */
+/** Default option row: icon + label + optional model metadata. */
 export function ModelOption({
   id,
   label,
@@ -256,9 +261,9 @@ export function ModelOption({
   const selected = selector.value === id;
 
   const resolvedLabel =
-    label ?? (isWhisperModel(id) ? MODELS[id].label : id);
+    label ?? (isTranscriptionModel(id) ? MODELS[id].label : id);
   const resolvedMeta =
-    meta ?? (isWhisperModel(id) ? MODELS[id].size : undefined);
+    meta ?? (isTranscriptionModel(id) ? MODELS[id].size : undefined);
 
   const optionCtx = useMemo<ModelOptionContextValue>(
     () => ({

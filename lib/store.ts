@@ -19,8 +19,9 @@ import {
   trimClipEdgeResult,
 } from "./edits";
 import {
+  DEFAULT_TRANSCRIPTION_MODEL,
   isModelChoice,
-  isWhisperModel,
+  isTranscriptionModel,
   loadModelPreference,
   saveModelPreference,
 } from "./models";
@@ -47,17 +48,17 @@ interface EditorState {
   duration: number;
   /** Mono 16 kHz PCM of the media's audio track (used for waveform + ASR). */
   audio: Float32Array | null;
-  /** Transcript source selected on the upload screen (Whisper or import). */
+  /** Transcript source selected on the upload screen (local ASR or import). */
   model: ModelChoice;
   /**
    * Caption file parsed on the upload screen when source is "import".
-   * Cleared when switching back to a Whisper model or after media loads.
+   * Cleared when switching back to a transcription model or after media loads.
    */
   pendingTranscript: PendingTranscript | null;
   /** IndexedDB project id when this session is persisted; null for a fresh upload mid-pipeline. */
   projectId: string | null;
   /**
-   * When true, Editor extracts audio for the waveform but skips Whisper
+   * When true, Editor extracts audio for the waveform but skips transcription
    * (restored projects / imported transcripts already have words).
    */
   skipTranscription: boolean;
@@ -96,7 +97,7 @@ interface EditorState {
   exportOpen: boolean;
 
   // Actions
-  /** Load media for editing. Pass `words` to skip Whisper and use that transcript. */
+  /** Load media for editing. Pass `words` to skip local ASR and use that transcript. */
   loadVideo: (file: File, options?: { words?: Word[] }) => void;
   /** Restore a saved project from IndexedDB (no re-transcription). */
   openProject: (id: string) => Promise<void>;
@@ -218,7 +219,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   mediaKind: null,
   duration: 0,
   audio: null,
-  model: "base",
+  model: DEFAULT_TRANSCRIPTION_MODEL,
   pendingTranscript: null,
   projectId: null,
   skipTranscription: false,
@@ -260,7 +261,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       mediaKind: kind,
       projectId: null,
       skipTranscription: Boolean(imported),
-      model: imported ? "import" : isWhisperModel(current) ? current : "base",
+      model:
+        imported
+          ? "import"
+          : isTranscriptionModel(current)
+            ? current
+            : DEFAULT_TRANSCRIPTION_MODEL,
       pendingTranscript: null,
       status: "preparing",
       progress: {
@@ -298,7 +304,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       mediaUrl: URL.createObjectURL(file),
       mediaKind: record.mediaKind,
       duration: record.duration,
-      model: isModelChoice(record.model) ? record.model : "base",
+      model: isModelChoice(record.model)
+        ? record.model
+        : DEFAULT_TRANSCRIPTION_MODEL,
       projectId: record.id,
       skipTranscription: true,
       pendingTranscript: null,
@@ -331,7 +339,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setModel: (model) => {
-    if (isWhisperModel(model)) {
+    if (isTranscriptionModel(model)) {
       saveModelPreference(model);
       set({ model, pendingTranscript: null });
     } else {
@@ -372,7 +380,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     ) {
       return;
     }
-    // Stop Whisper if it was still running.
+    // Stop local transcription if it was still running.
     void import("@/hooks/useTranscriber").then((m) => m.cancelTranscription());
     set({
       words,

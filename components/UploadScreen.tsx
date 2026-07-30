@@ -267,6 +267,7 @@ export default function UploadScreen({
             <p className="ml-2 text-[15px] font-medium text-zinc-800">Rescript</p>
           </div>
           <ModelSelector groupLabel="Transcript source">
+            <ModelOption id="parakeet-v2" />
             <ModelOption id="base" />
             <ModelOption id="small" />
             <ModelOptionSeparator />
@@ -366,7 +367,7 @@ export default function UploadScreen({
 
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
-            { icon: Type, title: "Transcribe", text: "Whisper locally, or import SRT / VTT." },
+            { icon: Type, title: "Transcribe", text: "Parakeet or Whisper locally, or import SRT / VTT." },
             { icon: Scissors, title: "Edit", text: "Select words and hit delete to edit." },
             { icon: Clapperboard, title: "Export", text: "Render the final cut to MP4 or M4A." },
           ].map(({ icon: Icon, title, text }) => (

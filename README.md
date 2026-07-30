@@ -19,7 +19,7 @@ the media. Export the final cut — without your file ever leaving your device.
 
 - 🔒 **Private by design** — no server, no auth, no uploads; all media processing happens on-device
 - 📝 **Word-level editing** — select words, press ⌫, the cut follows the text
-- 📥 **Import your own transcript** — skip Whisper and edit with an SRT, VTT, or JSON caption file
+- 📥 **Import your own transcript** — skip local transcription and edit with an SRT, VTT, or JSON caption file
 - 🧹 **Filler removal** — one-click cut of "um", "uh", and similar fillers
 - 🗣️ **Speaker diarization** — the transcript is grouped by speaker
 - 🎬 **Timeline** — waveform, wordbar with draggable timing handles, Split,
@@ -36,7 +36,7 @@ the media. Export the final cut — without your file ever leaving your device.
 | Piece | Tech |
 | --- | --- |
 | App | [Next.js](https://nextjs.org) + React + TypeScript + Tailwind |
-| Transcription | [transformers.js](https://github.com/huggingface/transformers.js) running [`whisper-base_timestamped`](https://huggingface.co/onnx-community/whisper-base_timestamped) or [`whisper-small_timestamped`](https://huggingface.co/onnx-community/whisper-small_timestamped) (WebGPU with WASM fallback) in a Web Worker |
+| Transcription | [parakeet.js](https://github.com/ysdede/parakeet.js) running Parakeet TDT 0.6B v2 by default, plus [transformers.js](https://github.com/huggingface/transformers.js) running Whisper Base/Small; WebGPU with WASM fallback in a Web Worker |
 | Speaker labels | [`pyannote-segmentation-3.0`](https://huggingface.co/onnx-community/pyannote-segmentation-3.0) (ONNX) |
 | Media processing | [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) (multi-threaded) for audio extraction and export |
 | State | zustand |
@@ -53,8 +53,9 @@ npm run lint    # eslint
 Open [http://localhost:3000](http://localhost:3000) and drop in a video with an
 audio track.
 
-> **Note on "offline":** the AI models (Whisper Base ~200 MB, or Small ~600 MB,
-> plus a small speaker model) are downloaded from the Hugging Face Hub the
+> **Note on "offline":** the selected AI model (Parakeet v2 is ~1.3 GB with
+> the default WebGPU weights; Whisper Base is ~200 MB and Small is ~600 MB),
+> plus a small speaker model, is downloaded from the Hugging Face Hub the
 > *first* time you transcribe, then cached in browser storage. After that,
 > everything — transcription, editing, export — works with the network fully
 > disconnected. Your media and transcript never leave the device; the only
@@ -64,9 +65,9 @@ audio track.
 ## How it works
 
 1. **Extract** — ffmpeg.wasm decodes the audio track to mono 16 kHz PCM.
-2. **Transcribe** — Whisper runs in a Web Worker with `return_timestamps: "word"`,
-   streaming text as it goes; pyannote assigns a speaker to every word.
-   Choose **Whisper Base**, **Whisper Small**, or **Import transcript**
+2. **Transcribe** — Parakeet v2 (the default) or Whisper runs in a Web Worker
+   with word timestamps; pyannote assigns a speaker to every word. Choose
+   **Parakeet v2**, **Whisper Base**, **Whisper Small**, or **Import transcript**
    (SRT / VTT / JSON) on the homepage.
 3. **Edit** — deleting words produces "cut ranges" of the original media. The
    preview player skips them in real time and the timeline shows them in red.

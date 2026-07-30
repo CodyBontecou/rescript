@@ -1,10 +1,10 @@
 /**
- * Voice-activity helpers used to reduce Whisper hallucinations on long
- * silence / music stretches.
+ * Voice-activity helpers used to keep local ASR off long silence / music
+ * stretches and reduce hallucinations.
  *
  * Strategy: detect speech frames, merge short pauses, then return contiguous
- * speech segments. Callers run Whisper only on those slices and remap
- * timestamps back onto the original timeline — silent gaps are never decoded.
+ * speech segments. Callers run Parakeet or Whisper only on those slices and
+ * remap timestamps onto the original timeline — silent gaps are never decoded.
  */
 
 export const VAD_SAMPLE_RATE = 16_000;

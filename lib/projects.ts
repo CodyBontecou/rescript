@@ -7,7 +7,7 @@
  */
 
 import type { ModelChoice } from "./models";
-import { isModelChoice } from "./models";
+import { DEFAULT_TRANSCRIPTION_MODEL, isModelChoice } from "./models";
 import type { MediaKind } from "./media";
 import type { ManualCut, SceneBoundary, Word } from "./types";
 
@@ -124,7 +124,9 @@ export async function putProject(input: ProjectWrite): Promise<string> {
     name: input.name,
     mediaKind: input.mediaKind,
     duration: input.duration,
-    model: isModelChoice(input.model) ? input.model : "base",
+    model: isModelChoice(input.model)
+      ? input.model
+      : DEFAULT_TRANSCRIPTION_MODEL,
     words: input.words,
     showDeleted: input.showDeleted,
     manualCuts: input.manualCuts ?? [],
