@@ -183,16 +183,34 @@
           "markdownDescription": "Enables the cancel command without any pre-configured scope."
         },
         {
+          "description": "Enables the export_entitlement_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:allow-export-entitlement-status",
+          "markdownDescription": "Enables the export_entitlement_status command without any pre-configured scope."
+        },
+        {
           "description": "Enables the export_result command without any pre-configured scope.",
           "type": "string",
           "const": "av-media:allow-export-result",
           "markdownDescription": "Enables the export_result command without any pre-configured scope."
         },
         {
+          "description": "Enables the is_export_entitled command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:allow-is-export-entitled",
+          "markdownDescription": "Enables the is_export_entitled command without any pre-configured scope."
+        },
+        {
           "description": "Enables the prepare_result command without any pre-configured scope.",
           "type": "string",
           "const": "av-media:allow-prepare-result",
           "markdownDescription": "Enables the prepare_result command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the purchase_unlimited_exports command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:allow-purchase-unlimited-exports",
+          "markdownDescription": "Enables the purchase_unlimited_exports command without any pre-configured scope."
         },
         {
           "description": "Enables the register_listener command without any pre-configured scope.",
@@ -205,6 +223,12 @@
           "type": "string",
           "const": "av-media:allow-remove-listener",
           "markdownDescription": "Enables the remove_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the restore_export_purchases command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:allow-restore-export-purchases",
+          "markdownDescription": "Enables the restore_export_purchases command without any pre-configured scope."
         },
         {
           "description": "Enables the snapshot command without any pre-configured scope.",
@@ -231,16 +255,34 @@
           "markdownDescription": "Denies the cancel command without any pre-configured scope."
         },
         {
+          "description": "Denies the export_entitlement_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:deny-export-entitlement-status",
+          "markdownDescription": "Denies the export_entitlement_status command without any pre-configured scope."
+        },
+        {
           "description": "Denies the export_result command without any pre-configured scope.",
           "type": "string",
           "const": "av-media:deny-export-result",
           "markdownDescription": "Denies the export_result command without any pre-configured scope."
         },
         {
+          "description": "Denies the is_export_entitled command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:deny-is-export-entitled",
+          "markdownDescription": "Denies the is_export_entitled command without any pre-configured scope."
+        },
+        {
           "description": "Denies the prepare_result command without any pre-configured scope.",
           "type": "string",
           "const": "av-media:deny-prepare-result",
           "markdownDescription": "Denies the prepare_result command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the purchase_unlimited_exports command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:deny-purchase-unlimited-exports",
+          "markdownDescription": "Denies the purchase_unlimited_exports command without any pre-configured scope."
         },
         {
           "description": "Denies the register_listener command without any pre-configured scope.",
@@ -253,6 +295,12 @@
           "type": "string",
           "const": "av-media:deny-remove-listener",
           "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the restore_export_purchases command without any pre-configured scope.",
+          "type": "string",
+          "const": "av-media:deny-restore-export-purchases",
+          "markdownDescription": "Denies the restore_export_purchases command without any pre-configured scope."
         },
         {
           "description": "Denies the snapshot command without any pre-configured scope.",

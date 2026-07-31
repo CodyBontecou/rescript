@@ -114,6 +114,12 @@ The simulator app is written to:
 apps/studio/src-tauri/gen/apple/build/arm64-sim/Rescript.app
 ```
 
+### Unlimited Exports purchase
+
+Editing and transcription remain free. On iOS, export is unlocked by the StoreKit 2 non-consumable product `tech.isolated.rescript.unlimited_exports`. The paywall uses StoreKit's localized price, restores purchases through `AppStore.sync()`, and automatically continues the requested export after a verified purchase. Native AV export also checks the verified entitlement so the renderer cannot bypass the gate. Desktop builds remain unlocked.
+
+`apps/studio/src-tauri/gen/apple/Rescript.storekit` supplies a local $9.99 test product to the shared debug scheme. Before shipping, create the matching non-consumable in App Store Connect, set its base price to USD 9.99, add localization and review metadata, and include it with the app version submitted for review.
+
 ## Native processing
 
 ### macOS

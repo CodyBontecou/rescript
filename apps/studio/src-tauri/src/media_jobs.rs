@@ -30,6 +30,9 @@ pub enum MediaJobError {
     NotFound { job_id: String },
     #[error("native media tool is unavailable: {message}")]
     ToolUnavailable { message: String },
+    #[cfg_attr(not(target_os = "ios"), allow(dead_code))]
+    #[error("unlimited exports purchase required")]
+    PurchaseRequired,
     #[error("media job failed: {message}")]
     Failed { message: String },
     #[error("media job was cancelled")]

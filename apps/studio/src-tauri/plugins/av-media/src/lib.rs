@@ -14,6 +14,8 @@ tauri::ios_plugin_binding!(init_plugin_av_media);
 pub enum Error {
     #[error("mobile AV media plugin failed: {0}")]
     Plugin(#[from] tauri::plugin::mobile::PluginInvokeError),
+    #[error("mobile AV media plugin returned an invalid response: {0}")]
+    InvalidResponse(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -48,6 +50,42 @@ struct JobIdResponse {
     job_id: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StartExportResponse {
+    job_id: Option<String>,
+    purchase_required: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StartExportOutcome {
+    Started(String),
+    PurchaseRequired,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportEntitlementState {
+    pub enforcement: String,
+    pub entitled: bool,
+    pub product_id: String,
+    pub display_price: Option<String>,
+    pub can_purchase: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportEntitlementCheck {
+    pub entitled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPurchaseResult {
+    pub outcome: String,
+    pub entitlement: ExportEntitlementState,
+}
+
 pub struct AvMedia<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> AvMedia<R> {
@@ -60,9 +98,36 @@ impl<R: Runtime> AvMedia<R> {
             .map(|response| response.job_id)
     }
 
-    pub fn start_export(&self, payload: ExportPayload) -> Result<String> {
-        self.invoke::<JobIdResponse, _>("startExport", payload)
-            .map(|response| response.job_id)
+    pub fn start_export(&self, payload: ExportPayload) -> Result<StartExportOutcome> {
+        self.invoke::<StartExportResponse, _>("startExport", payload)
+            .and_then(|response| {
+                if response.purchase_required {
+                    Ok(StartExportOutcome::PurchaseRequired)
+                } else if let Some(job_id) = response.job_id {
+                    Ok(StartExportOutcome::Started(job_id))
+                } else {
+                    Err(Error::InvalidResponse(
+                        "native export returned neither a job ID nor a purchase requirement".into(),
+                    ))
+                }
+            })
+    }
+
+    pub fn export_entitlement_status(&self) -> Result<ExportEntitlementState> {
+        self.invoke("exportEntitlementStatus", serde_json::json!({}))
+    }
+
+    pub fn is_export_entitled(&self) -> Result<bool> {
+        self.invoke::<ExportEntitlementCheck, _>("isExportEntitled", serde_json::json!({}))
+            .map(|response| response.entitled)
+    }
+
+    pub fn purchase_unlimited_exports(&self) -> Result<ExportPurchaseResult> {
+        self.invoke("purchaseUnlimitedExports", serde_json::json!({}))
+    }
+
+    pub fn restore_export_purchases(&self) -> Result<ExportPurchaseResult> {
+        self.invoke("restoreExportPurchases", serde_json::json!({}))
     }
 
     pub fn snapshot<T: DeserializeOwned>(&self, job_id: String) -> Result<Option<T>> {

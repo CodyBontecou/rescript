@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { flushProjectAutosave } from "../editor/autosave";
 import { useEditorStore } from "../editor/store";
+import type { ExportEntitlementState } from "../export-entitlement";
 import ExportDialog from "./ExportDialog";
 import MediaPreview from "./MediaPreview";
 import Timeline from "./Timeline";
@@ -40,11 +41,31 @@ export default function EditorShell({
   onImportTranscript,
   onTranscribe,
   onExport,
+  exportEntitlement,
+  exportAccessChecking,
+  paywallOpen,
+  purchaseBusy,
+  purchaseError,
+  purchaseMessage,
+  onPurchase,
+  onRestorePurchase,
+  onRetryExportAccess,
+  onDismissPaywall,
 }: {
   onHome: () => void;
   onImportTranscript: () => void;
   onTranscribe: () => void;
   onExport: () => Promise<void>;
+  exportEntitlement: ExportEntitlementState;
+  exportAccessChecking: boolean;
+  paywallOpen: boolean;
+  purchaseBusy: boolean;
+  purchaseError: string | null;
+  purchaseMessage: string | null;
+  onPurchase: () => void;
+  onRestorePurchase: () => void;
+  onRetryExportAccess: () => void;
+  onDismissPaywall: () => void;
 }) {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -109,7 +130,19 @@ export default function EditorShell({
         </div>
       </div>
       <Timeline />
-      <ExportDialog onStart={onExport} />
+      <ExportDialog
+        onStart={onExport}
+        entitlement={exportEntitlement}
+        accessChecking={exportAccessChecking}
+        paywallOpen={paywallOpen}
+        purchaseBusy={purchaseBusy}
+        purchaseError={purchaseError}
+        purchaseMessage={purchaseMessage}
+        onPurchase={onPurchase}
+        onRestorePurchase={onRestorePurchase}
+        onRetryExportAccess={onRetryExportAccess}
+        onDismiss={onDismissPaywall}
+      />
     </div>
   );
 }

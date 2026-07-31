@@ -11,6 +11,10 @@
     "av-media:allow-cancel",
     "av-media:allow-prepare-result",
     "av-media:allow-export-result",
+    "av-media:allow-export-entitlement-status",
+    "av-media:allow-is-export-entitled",
+    "av-media:allow-purchase-unlimited-exports",
+    "av-media:allow-restore-export-purchases",
     "av-media:allow-register-listener",
     "av-media:allow-remove-listener"
   ]

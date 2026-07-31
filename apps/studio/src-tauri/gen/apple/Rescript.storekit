@@ -1,0 +1,52 @@
+{
+  "identifier" : "C991741B-2BCF-49C6-8F42-1A49B1D520A4",
+  "type" : "Configuration",
+  "version" : 3,
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "F18D29B0-55E9-4B8B-A408-1C42DE17A2D8",
+      "localizations" : [
+        {
+          "description" : "Export edited audio and video without limits. One-time purchase, no subscription.",
+          "displayName" : "Unlimited Exports",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "tech.isolated.rescript.unlimited_exports",
+      "referenceName" : "Unlimited Exports",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ]
+}

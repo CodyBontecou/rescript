@@ -5,6 +5,15 @@ struct JobIdArgs: Decodable {
     let jobId: String
 }
 
+struct StartExportResponse: Codable {
+    let jobId: String?
+    let purchaseRequired: Bool
+}
+
+struct ExportEntitlementCheck: Codable {
+    let entitled: Bool
+}
+
 struct MobileJobProgress: Codable {
     let jobId: String
     let kind: String
@@ -23,8 +32,19 @@ struct MobileJobJournal: Codable {
 @available(iOS 16.0, *)
 final class AvMediaPlugin: Plugin {
     private let lock = NSLock()
+    private let exportEntitlements = ExportEntitlementService()
     private var jobs: [String: MobileMediaJob] = [:]
     private var journals: [String: MobileJobJournal] = [:]
+
+    override init() {
+        super.init()
+        Task { [weak self] in
+            guard let self else { return }
+            await self.exportEntitlements.startObserving { [weak self] state in
+                self?.emitEntitlement(state)
+            }
+        }
+    }
 
     @objc public func startPrepare(_ invoke: Invoke) throws {
         let args = try invoke.parseArgs(PrepareArgs.self)
@@ -77,50 +97,113 @@ final class AvMediaPlugin: Plugin {
 
     @objc public func startExport(_ invoke: Invoke) throws {
         let args = try invoke.parseArgs(ExportArgs.self)
-        let id = "ios-\(UUID().uuidString.lowercased())"
-        let job = MobileMediaJob(id: id, kind: "export")
-        install(job: job)
-        invoke.resolve(["jobId": id])
+        Task { [weak self] in
+            guard let self else {
+                invoke.reject("The native export service is unavailable.")
+                return
+            }
+            guard await self.exportEntitlements.isEntitled() else {
+                invoke.resolve(StartExportResponse(jobId: nil, purchaseRequired: true))
+                return
+            }
 
-        Task.detached { [weak self, job] in
-            guard let self else { return }
-            self.update(
-                jobId: id,
-                status: "running",
-                phase: "export",
-                message: "Rendering edited media",
-                ratio: 0.01
-            )
-            do {
-                let result = try await AvMediaService.export(args, job: job) {
-                    [weak self] ratio, phase, message in
-                    self?.update(
+            let id = "ios-\(UUID().uuidString.lowercased())"
+            let job = MobileMediaJob(id: id, kind: "export")
+            self.install(job: job)
+            invoke.resolve(StartExportResponse(jobId: id, purchaseRequired: false))
+
+            Task.detached { [weak self, job] in
+                guard let self else { return }
+                self.update(
+                    jobId: id,
+                    status: "running",
+                    phase: "export",
+                    message: "Rendering edited media",
+                    ratio: 0.01
+                )
+                do {
+                    let result = try await AvMediaService.export(args, job: job) {
+                        [weak self] ratio, phase, message in
+                        self?.update(
+                            jobId: id,
+                            status: "running",
+                            phase: phase,
+                            message: message,
+                            ratio: ratio
+                        )
+                    }
+                    self.completeExport(jobId: id, result: result)
+                } catch AvMediaError.cancelled {
+                    self.update(
                         jobId: id,
-                        status: "running",
-                        phase: phase,
-                        message: message,
-                        ratio: ratio
+                        status: "cancelled",
+                        phase: "cancelled",
+                        message: "Export cancelled",
+                        ratio: nil
+                    )
+                } catch {
+                    self.update(
+                        jobId: id,
+                        status: "failed",
+                        phase: "failed",
+                        message: error.localizedDescription,
+                        ratio: nil
                     )
                 }
-                self.completeExport(jobId: id, result: result)
-            } catch AvMediaError.cancelled {
-                self.update(
-                    jobId: id,
-                    status: "cancelled",
-                    phase: "cancelled",
-                    message: "Export cancelled",
-                    ratio: nil
-                )
-            } catch {
-                self.update(
-                    jobId: id,
-                    status: "failed",
-                    phase: "failed",
-                    message: error.localizedDescription,
-                    ratio: nil
-                )
+                self.removeActiveJob(id)
             }
-            self.removeActiveJob(id)
+        }
+    }
+
+    @objc public func exportEntitlementStatus(_ invoke: Invoke) {
+        Task { [weak self] in
+            guard let self else {
+                invoke.reject("The App Store service is unavailable.")
+                return
+            }
+            invoke.resolve(await self.exportEntitlements.status())
+        }
+    }
+
+    @objc public func isExportEntitled(_ invoke: Invoke) {
+        Task { [weak self] in
+            guard let self else {
+                invoke.reject("The App Store service is unavailable.")
+                return
+            }
+            invoke.resolve(
+                ExportEntitlementCheck(
+                    entitled: await self.exportEntitlements.isEntitled()
+                )
+            )
+        }
+    }
+
+    @objc public func purchaseUnlimitedExports(_ invoke: Invoke) {
+        Task { [weak self] in
+            guard let self else {
+                invoke.reject("The App Store service is unavailable.")
+                return
+            }
+            do {
+                invoke.resolve(try await self.exportEntitlements.purchase())
+            } catch {
+                invoke.reject(error.localizedDescription)
+            }
+        }
+    }
+
+    @objc public func restoreExportPurchases(_ invoke: Invoke) {
+        Task { [weak self] in
+            guard let self else {
+                invoke.reject("The App Store service is unavailable.")
+                return
+            }
+            do {
+                invoke.resolve(try await self.exportEntitlements.restore())
+            } catch {
+                invoke.reject(error.localizedDescription)
+            }
         }
     }
 
@@ -257,6 +340,10 @@ final class AvMediaPlugin: Plugin {
 
     private func emit(_ progress: MobileJobProgress) {
         try? trigger("jobProgress", data: progress)
+    }
+
+    private func emitEntitlement(_ state: ExportEntitlementState) {
+        try? trigger("exportEntitlementChanged", data: state)
     }
 
     private func jobsDirectory() -> URL {

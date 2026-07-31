@@ -35,6 +35,18 @@ import { getCutRanges, getKeepRanges } from "@rescript/core/edits";
 import HomeScreen from "./components/HomeScreen";
 import { flushProjectAutosave } from "./editor/autosave";
 import { useEditorStore } from "./editor/store";
+import {
+  LOCKED_EXPORT_ENTITLEMENT,
+  UNLOCKED_EXPORT_ENTITLEMENT,
+  getExportEntitlement,
+  isPurchaseRequired,
+  listenForExportEntitlementChanges,
+  purchaseUnlimitedExports,
+  restoreExportPurchases,
+  type ExportEntitlementState,
+  type ExportPurchaseResult,
+} from "./export-entitlement";
+import { PendingExportCoordinator } from "./pending-export";
 import "./styles.css";
 
 interface PlatformInfo {
@@ -106,9 +118,19 @@ export default function App() {
     useState(DEFAULT_SPEAKER_DIARIZATION_ENABLED);
   const [homeBusy, setHomeBusy] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
+  const [exportEntitlement, setExportEntitlement] =
+    useState<ExportEntitlementState>(UNLOCKED_EXPORT_ENTITLEMENT);
+  const [exportAccessChecking, setExportAccessChecking] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [purchaseMessage, setPurchaseMessage] = useState<string | null>(null);
   const manifest = useEditorStore((state) => state.manifest);
   const operationToken = useRef(0);
   const playbackRef = useRef<PlaybackSource | null>(null);
+  const pendingExport = useRef(new PendingExportCoordinator());
+  const entitlementCheckInProgress = useRef(false);
+  const purchaseOperationInProgress = useRef(false);
 
   function ownsOperation(token: number, projectId: string, jobId?: string): boolean {
     const state = useEditorStore.getState();
@@ -163,6 +185,46 @@ export default function App() {
     void refreshProjects();
     void resumePersistedJob();
   }, []);
+
+  useEffect(() => {
+    if (!platform) return;
+    if (platform.os !== "ios") {
+      setExportEntitlement(UNLOCKED_EXPORT_ENTITLEMENT);
+      return;
+    }
+
+    let active = true;
+    let unregister: (() => Promise<void>) | null = null;
+    const accept = (state: ExportEntitlementState) => {
+      if (!active) return;
+      setExportEntitlement(state);
+      if (state.entitled && document.visibilityState === "visible") {
+        resumePendingExport(state);
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshExportEntitlement();
+      }
+    };
+
+    setExportEntitlement(LOCKED_EXPORT_ENTITLEMENT);
+    void refreshExportEntitlement();
+    void listenForExportEntitlementChanges(accept)
+      .then((cleanup) => {
+        if (active) unregister = cleanup;
+        else void cleanup();
+      })
+      .catch((cause) => {
+        if (active) setPurchaseError(messageOf(cause));
+      });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (unregister) void unregister();
+    };
+  }, [platform?.os]);
 
   useEffect(() => {
     return () => {
@@ -495,6 +557,10 @@ export default function App() {
       if (!discard) return false;
     }
     operationToken.current += 1;
+    pendingExport.current.clear();
+    setPaywallOpen(false);
+    setPurchaseError(null);
+    setPurchaseMessage(null);
     if (store.cancelJob) await store.cancelJob().catch(() => undefined);
     await releaseCurrentPlayback();
     store.reset();
@@ -611,6 +677,144 @@ export default function App() {
     }
   }
 
+  function queuePendingExport(projectId: string) {
+    pendingExport.current.remember(projectId);
+  }
+
+  function resumePendingExport(entitlement: ExportEntitlementState): boolean {
+    const store = useEditorStore.getState();
+    const intent = pendingExport.current.consume({
+      accessGranted:
+        entitlement.enforcement === "none" || entitlement.entitled,
+      projectId: store.manifest?.id ?? null,
+      exportDialogOpen: store.exportOpen,
+      ready: store.status === "ready",
+    });
+    if (!intent) return false;
+
+    setPaywallOpen(false);
+    setPurchaseError(null);
+    setPurchaseMessage(null);
+    void startExport();
+    return true;
+  }
+
+  async function refreshExportEntitlement() {
+    if (
+      entitlementCheckInProgress.current ||
+      purchaseOperationInProgress.current
+    ) return;
+    entitlementCheckInProgress.current = true;
+    setExportAccessChecking(true);
+    setPurchaseError(null);
+    try {
+      const entitlement = await getExportEntitlement();
+      setExportEntitlement(entitlement);
+      if (document.visibilityState === "visible") {
+        resumePendingExport(entitlement);
+      }
+    } catch (cause) {
+      setPurchaseError(messageOf(cause));
+    } finally {
+      entitlementCheckInProgress.current = false;
+      setExportAccessChecking(false);
+    }
+  }
+
+  async function requestExport() {
+    const store = useEditorStore.getState();
+    if (!store.manifest || store.status !== "ready") return;
+    if (entitlementCheckInProgress.current) return;
+    const projectId = store.manifest.id;
+
+    entitlementCheckInProgress.current = true;
+    setExportAccessChecking(true);
+    setPurchaseError(null);
+    setPurchaseMessage(null);
+    try {
+      const entitlement = await getExportEntitlement();
+      setExportEntitlement(entitlement);
+      if (entitlement.enforcement === "none" || entitlement.entitled) {
+        pendingExport.current.clear();
+        setPaywallOpen(false);
+        await startExport();
+      } else {
+        queuePendingExport(projectId);
+        setPaywallOpen(true);
+      }
+    } catch (cause) {
+      if (platform?.os !== "ios") {
+        pendingExport.current.clear();
+        setExportEntitlement(UNLOCKED_EXPORT_ENTITLEMENT);
+        setPaywallOpen(false);
+        await startExport();
+      } else {
+        queuePendingExport(projectId);
+        setExportEntitlement(LOCKED_EXPORT_ENTITLEMENT);
+        setPurchaseError(`Could not check export access. ${messageOf(cause)}`);
+        setPaywallOpen(true);
+      }
+    } finally {
+      entitlementCheckInProgress.current = false;
+      setExportAccessChecking(false);
+    }
+  }
+
+  function handlePurchaseResult(result: ExportPurchaseResult) {
+    setExportEntitlement(result.entitlement);
+    switch (result.outcome) {
+      case "purchased":
+      case "alreadyEntitled":
+      case "restored":
+      case "notApplicable":
+        if (!result.entitlement.entitled) {
+          throw new Error("The purchase completed, but the App Store did not grant export access.");
+        }
+        if (document.visibilityState === "visible") {
+          resumePendingExport(result.entitlement);
+        }
+        break;
+      case "pending":
+        setPurchaseMessage(
+          "Purchase pending approval. Keep this export window open and the export will continue once it is approved."
+        );
+        break;
+      case "cancelled":
+        break;
+      case "notFound":
+        setPurchaseError("No previous Unlimited Exports purchase was found for this Apple ID.");
+        break;
+    }
+  }
+
+  async function runPurchaseOperation(operation: "purchase" | "restore") {
+    if (purchaseOperationInProgress.current) return;
+    purchaseOperationInProgress.current = true;
+    setPurchaseBusy(true);
+    setPurchaseError(null);
+    setPurchaseMessage(null);
+    try {
+      const result =
+        operation === "purchase"
+          ? await purchaseUnlimitedExports()
+          : await restoreExportPurchases();
+      handlePurchaseResult(result);
+    } catch (cause) {
+      setPurchaseError(messageOf(cause));
+    } finally {
+      purchaseOperationInProgress.current = false;
+      setPurchaseBusy(false);
+    }
+  }
+
+  function dismissPaywall() {
+    if (purchaseOperationInProgress.current) return;
+    pendingExport.current.clear();
+    setPaywallOpen(false);
+    setPurchaseError(null);
+    setPurchaseMessage(null);
+  }
+
   async function startExport() {
     let store = useEditorStore.getState();
     if (!store.manifest || store.status !== "ready") return;
@@ -664,7 +868,17 @@ export default function App() {
       useEditorStore.getState().setExportResult(result);
     } catch (cause) {
       if (ownsOperation(token, projectId, jobId ?? undefined)) {
-        useEditorStore.getState().setError(messageOf(cause));
+        const latest = useEditorStore.getState();
+        if (isPurchaseRequired(cause)) {
+          latest.setError(null);
+          queuePendingExport(projectId);
+          setExportEntitlement(LOCKED_EXPORT_ENTITLEMENT);
+          setPurchaseError(null);
+          setPurchaseMessage(null);
+          setPaywallOpen(true);
+        } else {
+          latest.setError(messageOf(cause));
+        }
       }
     } finally {
       if (jobId && terminalSeen) clearJobBookmark(jobId);
@@ -704,7 +918,17 @@ export default function App() {
         onHome={() => void goHome()}
         onImportTranscript={() => void importTranscript()}
         onTranscribe={() => void transcribeCurrentProject()}
-        onExport={startExport}
+        onExport={requestExport}
+        exportEntitlement={exportEntitlement}
+        exportAccessChecking={exportAccessChecking}
+        paywallOpen={paywallOpen}
+        purchaseBusy={purchaseBusy}
+        purchaseError={purchaseError}
+        purchaseMessage={purchaseMessage}
+        onPurchase={() => void runPurchaseOperation("purchase")}
+        onRestorePurchase={() => void runPurchaseOperation("restore")}
+        onRetryExportAccess={() => void refreshExportEntitlement()}
+        onDismissPaywall={dismissPaywall}
       />
     </Suspense>
   ) : (

@@ -36,6 +36,32 @@ Denies the cancel command without any pre-configured scope.
 <tr>
 <td>
 
+`av-media:allow-export-entitlement-status`
+
+</td>
+<td>
+
+Enables the export_entitlement_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:deny-export-entitlement-status`
+
+</td>
+<td>
+
+Denies the export_entitlement_status command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `av-media:allow-export-result`
 
 </td>
@@ -62,6 +88,32 @@ Denies the export_result command without any pre-configured scope.
 <tr>
 <td>
 
+`av-media:allow-is-export-entitled`
+
+</td>
+<td>
+
+Enables the is_export_entitled command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:deny-is-export-entitled`
+
+</td>
+<td>
+
+Denies the is_export_entitled command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `av-media:allow-prepare-result`
 
 </td>
@@ -81,6 +133,32 @@ Enables the prepare_result command without any pre-configured scope.
 <td>
 
 Denies the prepare_result command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:allow-purchase-unlimited-exports`
+
+</td>
+<td>
+
+Enables the purchase_unlimited_exports command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:deny-purchase-unlimited-exports`
+
+</td>
+<td>
+
+Denies the purchase_unlimited_exports command without any pre-configured scope.
 
 </td>
 </tr>
@@ -133,6 +211,32 @@ Enables the remove_listener command without any pre-configured scope.
 <td>
 
 Denies the remove_listener command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:allow-restore-export-purchases`
+
+</td>
+<td>
+
+Enables the restore_export_purchases command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`av-media:deny-restore-export-purchases`
+
+</td>
+<td>
+
+Denies the restore_export_purchases command without any pre-configured scope.
 
 </td>
 </tr>

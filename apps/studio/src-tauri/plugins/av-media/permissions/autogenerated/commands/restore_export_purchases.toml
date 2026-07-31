@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-restore-export-purchases"
+description = "Enables the restore_export_purchases command without any pre-configured scope."
+commands.allow = ["restore_export_purchases"]
+
+[[permission]]
+identifier = "deny-restore-export-purchases"
+description = "Denies the restore_export_purchases command without any pre-configured scope."
+commands.deny = ["restore_export_purchases"]

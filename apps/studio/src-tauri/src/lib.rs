@@ -13,7 +13,7 @@ use project_store::{
     CreateProjectInput, ImportedMediaInfo, ImportedTranscript, ProjectManifest, ProjectStore,
     ProjectStoreError, ProjectSummary, SaveProjectInput,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::{DialogExt, FileAccessMode, PickerMode};
@@ -30,12 +30,192 @@ struct PlatformInfo {
     mobile: bool,
 }
 
+const UNLIMITED_EXPORTS_PRODUCT_ID: &str = "tech.isolated.rescript.unlimited_exports";
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum ExportEntitlementEnforcement {
+    StoreKit,
+    None,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportEntitlementState {
+    enforcement: ExportEntitlementEnforcement,
+    entitled: bool,
+    product_id: String,
+    display_price: Option<String>,
+    can_purchase: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum ExportPurchaseOutcome {
+    Purchased,
+    AlreadyEntitled,
+    Restored,
+    NotFound,
+    Pending,
+    Cancelled,
+    NotApplicable,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportPurchaseResult {
+    outcome: ExportPurchaseOutcome,
+    entitlement: ExportEntitlementState,
+}
+
+fn unlocked_export_entitlement() -> ExportEntitlementState {
+    ExportEntitlementState {
+        enforcement: ExportEntitlementEnforcement::None,
+        entitled: true,
+        product_id: UNLIMITED_EXPORTS_PRODUCT_ID.into(),
+        display_price: None,
+        can_purchase: false,
+    }
+}
+
+#[cfg(target_os = "ios")]
+fn export_entitlement_from_mobile(
+    value: tauri_plugin_av_media::ExportEntitlementState,
+) -> Result<ExportEntitlementState, MediaJobError> {
+    let enforcement = match value.enforcement.as_str() {
+        "storeKit" => ExportEntitlementEnforcement::StoreKit,
+        "none" => ExportEntitlementEnforcement::None,
+        other => {
+            return Err(MediaJobError::Failed {
+                message: format!("native purchase service returned unknown enforcement: {other}"),
+            })
+        }
+    };
+    Ok(ExportEntitlementState {
+        enforcement,
+        entitled: value.entitled,
+        product_id: value.product_id,
+        display_price: value.display_price,
+        can_purchase: value.can_purchase,
+    })
+}
+
+#[cfg(target_os = "ios")]
+fn export_purchase_from_mobile(
+    value: tauri_plugin_av_media::ExportPurchaseResult,
+) -> Result<ExportPurchaseResult, MediaJobError> {
+    let outcome = match value.outcome.as_str() {
+        "purchased" => ExportPurchaseOutcome::Purchased,
+        "alreadyEntitled" => ExportPurchaseOutcome::AlreadyEntitled,
+        "restored" => ExportPurchaseOutcome::Restored,
+        "notFound" => ExportPurchaseOutcome::NotFound,
+        "pending" => ExportPurchaseOutcome::Pending,
+        "cancelled" => ExportPurchaseOutcome::Cancelled,
+        "notApplicable" => ExportPurchaseOutcome::NotApplicable,
+        other => {
+            return Err(MediaJobError::Failed {
+                message: format!("native purchase service returned unknown outcome: {other}"),
+            })
+        }
+    };
+    Ok(ExportPurchaseResult {
+        outcome,
+        entitlement: export_entitlement_from_mobile(value.entitlement)?,
+    })
+}
+
+#[cfg(target_os = "ios")]
+async fn ios_storekit_call<T, F>(operation: F) -> Result<T, MediaJobError>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(operation)
+        .await
+        .map_err(|error| MediaJobError::Failed {
+            message: format!("App Store task failed: {error}"),
+        })?
+        .map_err(|message| MediaJobError::Failed { message })
+}
+
 #[tauri::command]
 fn platform_info() -> PlatformInfo {
     PlatformInfo {
         os: std::env::consts::OS,
         arch: std::env::consts::ARCH,
         mobile: cfg!(mobile),
+    }
+}
+
+#[tauri::command]
+#[allow(unused_variables)]
+async fn export_entitlement_status(
+    app: AppHandle,
+) -> Result<ExportEntitlementState, MediaJobError> {
+    #[cfg(target_os = "ios")]
+    {
+        use tauri_plugin_av_media::AvMediaExt;
+        let mobile = ios_storekit_call(move || {
+            app.av_media()
+                .export_entitlement_status()
+                .map_err(|error| error.to_string())
+        })
+        .await?;
+        return export_entitlement_from_mobile(mobile);
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        Ok(unlocked_export_entitlement())
+    }
+}
+
+#[tauri::command]
+#[allow(unused_variables)]
+async fn purchase_unlimited_exports(
+    app: AppHandle,
+) -> Result<ExportPurchaseResult, MediaJobError> {
+    #[cfg(target_os = "ios")]
+    {
+        use tauri_plugin_av_media::AvMediaExt;
+        let mobile = ios_storekit_call(move || {
+            app.av_media()
+                .purchase_unlimited_exports()
+                .map_err(|error| error.to_string())
+        })
+        .await?;
+        return export_purchase_from_mobile(mobile);
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        Ok(ExportPurchaseResult {
+            outcome: ExportPurchaseOutcome::NotApplicable,
+            entitlement: unlocked_export_entitlement(),
+        })
+    }
+}
+
+#[tauri::command]
+#[allow(unused_variables)]
+async fn restore_export_purchases(
+    app: AppHandle,
+) -> Result<ExportPurchaseResult, MediaJobError> {
+    #[cfg(target_os = "ios")]
+    {
+        use tauri_plugin_av_media::AvMediaExt;
+        let mobile = ios_storekit_call(move || {
+            app.av_media()
+                .restore_export_purchases()
+                .map_err(|error| error.to_string())
+        })
+        .await?;
+        return export_purchase_from_mobile(mobile);
+    }
+    #[cfg(not(target_os = "ios"))]
+    {
+        Ok(ExportPurchaseResult {
+            outcome: ExportPurchaseOutcome::NotApplicable,
+            entitlement: unlocked_export_entitlement(),
+        })
     }
 }
 
@@ -288,13 +468,29 @@ fn start_prepare_media(
 
 #[tauri::command]
 #[allow(unused_variables)]
-fn start_export_media(
+async fn start_export_media(
     app: AppHandle,
     jobs: tauri::State<'_, MediaJobManager>,
     projects: tauri::State<'_, ProjectStore>,
     authority: tauri::State<'_, FileAuthority>,
     mut request: ExportMediaRequest,
 ) -> Result<String, MediaJobError> {
+    #[cfg(target_os = "ios")]
+    {
+        use tauri_plugin_av_media::AvMediaExt;
+        let entitlement_app = app.clone();
+        let entitled = ios_storekit_call(move || {
+            entitlement_app
+                .av_media()
+                .is_export_entitled()
+                .map_err(|error| error.to_string())
+        })
+        .await?;
+        if !entitled {
+            return Err(MediaJobError::PurchaseRequired);
+        }
+    }
+
     request.destination.destination = authority
         .consume(&request.destination.destination, AuthorityKind::Export)
         .map_err(|error| MediaJobError::InvalidInput {
@@ -326,27 +522,36 @@ fn start_export_media(
                 message: "export ranges are empty or exceed project duration".into(),
             });
         }
-        return app
-            .av_media()
-            .start_export(ExportPayload {
-                input_path: projects.media_path(&request.project_id)?,
-                destination: request.destination.destination,
-                media_kind: match manifest.media.media_kind {
-                    project_store::MediaKind::Video => "video".into(),
-                    project_store::MediaKind::Audio => "audio".into(),
-                },
-                keep_ranges: request
-                    .keep_ranges
-                    .into_iter()
-                    .map(|range| TimeRange {
-                        start: range.start,
-                        end: range.end,
-                    })
-                    .collect(),
-            })
-            .map_err(|error| MediaJobError::Failed {
-                message: error.to_string(),
-            });
+        let payload = ExportPayload {
+            input_path: projects.media_path(&request.project_id)?,
+            destination: request.destination.destination,
+            media_kind: match manifest.media.media_kind {
+                project_store::MediaKind::Video => "video".into(),
+                project_store::MediaKind::Audio => "audio".into(),
+            },
+            keep_ranges: request
+                .keep_ranges
+                .into_iter()
+                .map(|range| TimeRange {
+                    start: range.start,
+                    end: range.end,
+                })
+                .collect(),
+        };
+        let export_app = app.clone();
+        let outcome = ios_storekit_call(move || {
+            export_app
+                .av_media()
+                .start_export(payload)
+                .map_err(|error| error.to_string())
+        })
+        .await?;
+        return match outcome {
+            tauri_plugin_av_media::StartExportOutcome::Started(job_id) => Ok(job_id),
+            tauri_plugin_av_media::StartExportOutcome::PurchaseRequired => {
+                Err(MediaJobError::PurchaseRequired)
+            }
+        };
     }
     #[cfg(not(target_os = "ios"))]
     {
@@ -669,6 +874,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             platform_info,
+            export_entitlement_status,
+            purchase_unlimited_exports,
+            restore_export_purchases,
             list_projects,
             read_project,
             create_project,

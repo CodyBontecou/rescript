@@ -5,6 +5,10 @@ const COMMANDS: &[&str] = &[
     "cancel",
     "prepare_result",
     "export_result",
+    "export_entitlement_status",
+    "is_export_entitled",
+    "purchase_unlimited_exports",
+    "restore_export_purchases",
     "register_listener",
     "remove_listener",
 ];

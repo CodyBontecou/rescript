@@ -5,5 +5,25 @@
   "accentColor": "#818CF8",
   "fontFamily": "system",
   "category": "photo and video productivity",
-  "tone": "minimal, editorial, precise, private, premium"
+  "tone": "minimal, editorial, precise, private, premium",
+  "screens": [
+    {
+      "headline": "Edit media by editing words",
+      "subheadline": "Private, on-device transcription. Nothing is uploaded.",
+      "feature": "private on-device audio and video transcription",
+      "mood": "premium, clear, private, product-focused"
+    },
+    {
+      "headline": "Cut video like text",
+      "subheadline": "Delete words and Rescript removes the matching media.",
+      "feature": "transcript-based video editing with a synchronized timeline",
+      "mood": "focused, precise, editorial, polished"
+    },
+    {
+      "headline": "Export without uploading",
+      "subheadline": "Preview and save the finished cut entirely on your device.",
+      "feature": "private native video export",
+      "mood": "confident, clean, trustworthy, finished"
+    }
+  ]
 }

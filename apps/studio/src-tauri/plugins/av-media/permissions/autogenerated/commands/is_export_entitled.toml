@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-is-export-entitled"
+description = "Enables the is_export_entitled command without any pre-configured scope."
+commands.allow = ["is_export_entitled"]
+
+[[permission]]
+identifier = "deny-is-export-entitled"
+description = "Denies the is_export_entitled command without any pre-configured scope."
+commands.deny = ["is_export_entitled"]

@@ -20,7 +20,10 @@ let package = Package(
         .target(
             name: "tauri-plugin-av-media",
             dependencies: [.byName(name: "Tauri")],
-            path: "Sources"
+            path: "Sources",
+            linkerSettings: [
+                .linkedFramework("StoreKit")
+            ]
         )
     ]
 )

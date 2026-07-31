@@ -54,6 +54,13 @@ type CliOptions = {
   force: boolean;
 };
 
+type BrandScreenConfig = {
+  headline?: string;
+  subheadline?: string;
+  feature?: string;
+  mood?: string;
+};
+
 type BrandConfig = {
   appName?: string;
   primaryColor?: string;
@@ -62,6 +69,7 @@ type BrandConfig = {
   fontFamily?: string;
   category?: string;
   tone?: string;
+  screens?: BrandScreenConfig[];
 };
 
 type BrandColors = {
@@ -88,6 +96,7 @@ type RepoInsights = {
   features: DetectedFeature[];
   screenshots: string[];
   screenshotSearchPaths: string[];
+  screenOverrides: BrandScreenConfig[];
   brandConfigPath?: string;
 };
 
@@ -372,6 +381,7 @@ function inspectRepo(brandConfig: BrandConfig, options: CliOptions): RepoInsight
     features,
     screenshots: screenshotsInfo.files,
     screenshotSearchPaths: screenshotsInfo.searchPaths,
+    screenOverrides: brandConfig.screens ?? [],
     brandConfigPath: fs.existsSync(options.brandFile) ? relativePath(options.brandFile) : undefined,
   };
 }
@@ -838,21 +848,18 @@ function buildScreenshotPlan(insights: RepoInsights, options: CliOptions): Scree
   return screenSeeds.map((screen, index) => {
     const screenshotPath = insights.screenshots.length > 0 ? insights.screenshots[index % insights.screenshots.length] : null;
     const copy = buildScreenCopy(screen.feature, insights, screen.kind, index);
+    const override = insights.screenOverrides[index];
+    const feature = override?.feature ?? screen.feature.title;
+    const mood = override?.mood ?? screen.mood;
     const slug = slugify(`${index + 1}-${screen.title}`);
-    const prompt = buildBackgroundPrompt(
-      {
-        feature: screen.feature.title,
-        mood: screen.mood,
-      },
-      insights,
-    );
+    const prompt = buildBackgroundPrompt({ feature, mood }, insights);
     return {
       kind: screen.kind,
       title: screen.title,
-      feature: screen.feature.title,
-      headline: copy.headline,
-      subheadline: copy.subheadline,
-      mood: screen.mood,
+      feature,
+      headline: override?.headline ?? copy.headline,
+      subheadline: override?.subheadline ?? copy.subheadline,
+      mood,
       index: index + 1,
       slug,
       prompt,

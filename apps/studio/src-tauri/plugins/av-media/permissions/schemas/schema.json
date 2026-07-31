@@ -307,6 +307,18 @@
           "markdownDescription": "Denies the cancel command without any pre-configured scope."
         },
         {
+          "description": "Enables the export_entitlement_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-export-entitlement-status",
+          "markdownDescription": "Enables the export_entitlement_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the export_entitlement_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-export-entitlement-status",
+          "markdownDescription": "Denies the export_entitlement_status command without any pre-configured scope."
+        },
+        {
           "description": "Enables the export_result command without any pre-configured scope.",
           "type": "string",
           "const": "allow-export-result",
@@ -319,6 +331,18 @@
           "markdownDescription": "Denies the export_result command without any pre-configured scope."
         },
         {
+          "description": "Enables the is_export_entitled command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-is-export-entitled",
+          "markdownDescription": "Enables the is_export_entitled command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the is_export_entitled command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-is-export-entitled",
+          "markdownDescription": "Denies the is_export_entitled command without any pre-configured scope."
+        },
+        {
           "description": "Enables the prepare_result command without any pre-configured scope.",
           "type": "string",
           "const": "allow-prepare-result",
@@ -329,6 +353,18 @@
           "type": "string",
           "const": "deny-prepare-result",
           "markdownDescription": "Denies the prepare_result command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the purchase_unlimited_exports command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-purchase-unlimited-exports",
+          "markdownDescription": "Enables the purchase_unlimited_exports command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the purchase_unlimited_exports command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-purchase-unlimited-exports",
+          "markdownDescription": "Denies the purchase_unlimited_exports command without any pre-configured scope."
         },
         {
           "description": "Enables the register_listener command without any pre-configured scope.",
@@ -353,6 +389,18 @@
           "type": "string",
           "const": "deny-remove-listener",
           "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the restore_export_purchases command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-restore-export-purchases",
+          "markdownDescription": "Enables the restore_export_purchases command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the restore_export_purchases command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-restore-export-purchases",
+          "markdownDescription": "Denies the restore_export_purchases command without any pre-configured scope."
         },
         {
           "description": "Enables the snapshot command without any pre-configured scope.",
