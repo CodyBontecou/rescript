@@ -4,7 +4,7 @@
  * 1. Silero VAD (energy fallback) finds speech segments; silence is skipped.
  * 2. Parakeet (default) or Whisper (see lib/models.ts) transcribes each segment
  *    with per-word timestamps remapped onto the original timeline.
- * 3. Pyannote segmentation 3.0 assigns a speaker to each word.
+ * 3. When enabled for the project, Pyannote segmentation 3.0 assigns a speaker to each word.
  *
  * Models are fetched from the Hugging Face Hub on first use and cached in the
  * browser Cache Storage; every run after that is fully offline. The ONNX
@@ -530,30 +530,44 @@ function assignSpeakers(words: Word[], segments: DiarizationSegment[]) {
   }
 }
 
-async function completeTranscript(rawWords: Word[], audio: Float32Array) {
+async function completeTranscript(
+  rawWords: Word[],
+  audio: Float32Array,
+  speakerDiarizationEnabled: boolean
+) {
   // Post-process: collapse leftover n-gram loops and drop known hallucination
   // phrases ("I'm sorry", "thanks for watching", …) that slip past decoding.
   const words = cleanTranscript(rawWords);
 
   // Best-effort speaker diarization; a failure should not lose the transcript.
-  try {
-    post({ type: "progress", message: "Identifying speakers…", value: null });
-    const segments = await diarize(audio);
-    assignSpeakers(words, segments);
-  } catch (err) {
-    console.warn("Speaker diarization failed; using a single speaker.", err);
+  if (speakerDiarizationEnabled) {
+    try {
+      post({ type: "progress", message: "Identifying speakers…", value: null });
+      const segments = await diarize(audio);
+      assignSpeakers(words, segments);
+    } catch (err) {
+      console.warn("Speaker diarization failed; using a single speaker.", err);
+    }
   }
 
   post({ type: "complete", words });
 }
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
-  const { audio, duration, model, language } = event.data;
+  const {
+    audio,
+    duration,
+    model,
+    language,
+    speakerDiarizationEnabled,
+  } = event.data;
+  // Worker messages from an older cached client preserve the previous behavior.
+  const shouldDiarize = speakerDiarizationEnabled ?? true;
   try {
     const choice: TranscriptionModel = model ?? DEFAULT_TRANSCRIPTION_MODEL;
 
-    // Overlap ASR + Silero downloads; diarizer warms in the background.
-    getDiarizer().catch(() => {});
+    // Overlap ASR + Silero downloads; only warm the optional speaker model.
+    if (shouldDiarize) getDiarizer().catch(() => {});
 
     if (isParakeetModel(choice)) {
       const [transcriber, vad] = await Promise.all([
@@ -568,7 +582,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         duration,
         speechSegments
       );
-      await completeTranscript(rawWords, audio);
+      await completeTranscript(rawWords, audio, shouldDiarize);
       return;
     }
 
@@ -710,7 +724,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       reportProgress(0, 0);
     }
 
-    await completeTranscript(rawWords, audio);
+    await completeTranscript(rawWords, audio, shouldDiarize);
   } catch (err) {
     console.error(err);
     post({

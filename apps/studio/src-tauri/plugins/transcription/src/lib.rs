@@ -24,6 +24,7 @@ pub struct StartPayload {
     pub audio_path: String,
     pub model: String,
     pub language: Option<String>,
+    pub speaker_diarization_enabled: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

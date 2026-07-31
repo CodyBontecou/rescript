@@ -28,5 +28,7 @@ export interface WorkerRequest {
   audio: Float32Array;
   duration: number;
   model: TranscriptionModel;
+  /** Missing only for messages from clients cached before this setting existed. */
+  speakerDiarizationEnabled?: boolean;
   language?: string;
 }

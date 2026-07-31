@@ -21,6 +21,7 @@ import {
 } from "@rescript/workflows";
 import { TauriPlatformLive } from "@rescript/platform-tauri";
 import {
+  DEFAULT_SPEAKER_DIARIZATION_ENABLED,
   DEFAULT_TRANSCRIPTION_MODEL,
   type JobProgress,
   type PlaybackSource,
@@ -52,6 +53,7 @@ type PersistedJob = {
 
 const ACTIVE_JOB_KEY = "rescript.activeNativeJob.v1";
 const MODEL_PREFERENCE_KEY = "rescript.native:model";
+const DIARIZATION_PREFERENCE_KEY = "rescript.native:speaker-diarization";
 const EditorShell = lazy(() => import("./components/EditorShell"));
 
 function isTranscriptionModel(value: unknown): value is TranscriptionModel {
@@ -100,6 +102,8 @@ export default function App() {
   const [homeModel, setHomeModel] = useState<TranscriptionModel>(
     DEFAULT_TRANSCRIPTION_MODEL
   );
+  const [homeSpeakerDiarizationEnabled, setHomeSpeakerDiarizationEnabled] =
+    useState(DEFAULT_SPEAKER_DIARIZATION_ENABLED);
   const [homeBusy, setHomeBusy] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
   const manifest = useEditorStore((state) => state.manifest);
@@ -130,6 +134,10 @@ export default function App() {
     try {
       const saved = localStorage.getItem(MODEL_PREFERENCE_KEY);
       if (isTranscriptionModel(saved)) setHomeModel(saved);
+      const savedDiarization = localStorage.getItem(DIARIZATION_PREFERENCE_KEY);
+      if (savedDiarization === "true" || savedDiarization === "false") {
+        setHomeSpeakerDiarizationEnabled(savedDiarization === "true");
+      }
     } catch {
       // Keep the shared default when local storage is unavailable.
     }
@@ -426,12 +434,24 @@ export default function App() {
     saveModelPreference(model);
   }
 
+  function changeHomeSpeakerDiarization(enabled: boolean) {
+    setHomeSpeakerDiarizationEnabled(enabled);
+    try {
+      localStorage.setItem(DIARIZATION_PREFERENCE_KEY, String(enabled));
+    } catch {
+      // Keep the in-memory preference when local storage is unavailable.
+    }
+  }
+
   async function chooseMedia() {
     setHomeBusy(true);
     setHomeError(null);
     try {
       const selected = await Effect.runPromise(
-        chooseMediaAndCreateProject({ model: homeModel }).pipe(
+        chooseMediaAndCreateProject({
+          model: homeModel,
+          speakerDiarizationEnabled: homeSpeakerDiarizationEnabled,
+        }).pipe(
           Effect.provide(TauriPlatformLive)
         )
       );
@@ -692,9 +712,11 @@ export default function App() {
       platform={platform}
       projects={projects}
       model={homeModel}
+      speakerDiarizationEnabled={homeSpeakerDiarizationEnabled}
       busy={homeBusy}
       error={homeError}
       onModelChange={changeHomeModel}
+      onSpeakerDiarizationChange={changeHomeSpeakerDiarization}
       onChooseMedia={() => void chooseMedia()}
       onOpenProject={(project) => void openProject(project)}
       onRemoveProject={(project) => void deleteProject(project)}

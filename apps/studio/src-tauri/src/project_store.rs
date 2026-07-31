@@ -15,6 +15,10 @@ const MANIFEST_BACKUP: &str = "manifest.json.bak";
 const MAX_MANIFEST_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_TRANSCRIPT_BYTES: u64 = 25 * 1024 * 1024;
 
+fn legacy_speaker_diarization_default() -> bool {
+    true
+}
+
 #[derive(Debug, Error, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum ProjectStoreError {
@@ -103,6 +107,8 @@ pub struct ProjectManifest {
     pub media: ProjectMediaReference,
     pub duration: f64,
     pub model: ModelChoice,
+    #[serde(default = "legacy_speaker_diarization_default")]
+    pub speaker_diarization_enabled: bool,
     pub words: Vec<Word>,
     pub manual_cuts: Vec<ManualCut>,
     pub scene_boundaries: Vec<SceneBoundary>,
@@ -133,6 +139,8 @@ pub struct CreateProjectInput {
     pub media_kind: MediaKind,
     pub duration: Option<f64>,
     pub model: ModelChoice,
+    #[serde(default)]
+    pub speaker_diarization_enabled: bool,
     #[serde(default)]
     pub words: Vec<Word>,
 }
@@ -250,6 +258,7 @@ impl ProjectStore {
                 },
                 duration: input.duration.unwrap_or(0.0),
                 model: input.model,
+                speaker_diarization_enabled: input.speaker_diarization_enabled,
                 words: input.words,
                 manual_cuts: Vec::new(),
                 scene_boundaries: Vec::new(),
@@ -713,6 +722,7 @@ mod tests {
             media_kind: MediaKind::Video,
             duration: Some(4.0),
             model: ModelChoice::Base,
+            speaker_diarization_enabled: false,
             words: vec![Word {
                 id: 0,
                 text: "hello".into(),
@@ -737,6 +747,22 @@ mod tests {
     }
 
     #[test]
+    fn legacy_manifests_keep_speaker_diarization_enabled() {
+        let directory = tempdir().unwrap();
+        let source = directory.path().join("sample.mov");
+        fs::write(&source, b"media").unwrap();
+        let store = ProjectStore::new(directory.path().join("projects")).unwrap();
+        let created = store.create(create_input(&source)).unwrap();
+        let mut value = serde_json::to_value(created).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .remove("speakerDiarizationEnabled");
+        let decoded: ProjectManifest = serde_json::from_value(value).unwrap();
+        assert!(decoded.speaker_diarization_enabled);
+    }
+
+    #[test]
     fn creates_reads_saves_lists_and_removes_projects() {
         let directory = tempdir().unwrap();
         let source = directory.path().join("sample.mov");
@@ -745,6 +771,7 @@ mod tests {
 
         let created = store.create(create_input(&source)).unwrap();
         assert_eq!(created.revision, 0);
+        assert!(!created.speaker_diarization_enabled);
         assert!(Path::new(&store.media_path(&created.id).unwrap()).exists());
         assert_eq!(store.list().unwrap().len(), 1);
         assert_eq!(store.read(&created.id).unwrap().unwrap(), created);

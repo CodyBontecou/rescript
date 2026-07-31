@@ -25,6 +25,21 @@ body {
 .transcript-words [data-wid][data-sel].word-deleted {
   background-color: rgb(254 202 202 / 0.7);
 }
+.transcript-words [data-wid][data-focused] {
+  border-radius: 3px;
+  background-color: rgb(224 231 255 / 0.9);
+  box-shadow: inset 0 0 0 1px rgb(99 102 241 / 0.55);
+}
+.transcript-words [data-wid][data-focused].word-deleted {
+  background-color: rgb(254 202 202 / 0.9);
+}
+
+/* Lift the timeline clear of the bottom edge on touch-sized layouts. */
+@media (max-width: 1023px) {
+  .timeline-dock {
+    margin-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
 
 /* Let touch users pan the zoomed timeline while preserving pinch zoom. */
 .timeline-scroll {

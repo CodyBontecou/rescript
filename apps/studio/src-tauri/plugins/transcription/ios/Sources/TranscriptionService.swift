@@ -8,6 +8,7 @@ struct StartArgs: Decodable {
     let audioPath: String
     let model: String
     let language: String?
+    let speakerDiarizationEnabled: Bool
 }
 
 struct RemoveModelArgs: Decodable {
@@ -182,7 +183,7 @@ enum NativeTranscriptionService {
 
         var words = wordsWithoutSpeakers(results)
         let fileSize = ((try? FileManager.default.attributesOfItem(atPath: args.audioPath)[.size]) as? NSNumber)?.uint64Value ?? 0
-        if fileSize <= diarizationByteLimit {
+        if args.speakerDiarizationEnabled && fileSize <= diarizationByteLimit {
             do {
                 onProgress(0.85, "diarize", "Detecting speakers on device")
                 let speakerBase = modelsDirectory().appendingPathComponent("speakerkit", isDirectory: true)
@@ -309,7 +310,7 @@ enum NativeTranscriptionService {
 
         var words = parakeetWords(result.tokenTimings ?? [])
         let fileSize = ((try? FileManager.default.attributesOfItem(atPath: args.audioPath)[.size]) as? NSNumber)?.uint64Value ?? 0
-        if fileSize <= diarizationByteLimit {
+        if args.speakerDiarizationEnabled && fileSize <= diarizationByteLimit {
             do {
                 words = try await assignSpeakers(
                     to: words,

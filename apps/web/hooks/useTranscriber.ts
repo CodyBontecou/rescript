@@ -72,7 +72,12 @@ export function useTranscriber() {
     // Transfer a copy so the original stays available for the waveform.
     const copy = audio.slice();
     workerRef.current.postMessage(
-      { audio: copy, duration, model: transcriptionModel },
+      {
+        audio: copy,
+        duration,
+        model: transcriptionModel,
+        speakerDiarizationEnabled: store.speakerDiarizationEnabled,
+      },
       [copy.buffer]
     );
   }, []);

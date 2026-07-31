@@ -6,6 +6,7 @@ import {
 import {
   applyWordBounds,
   canSplitAt,
+  editedToOriginal,
   getClipSegments,
   getCutRanges,
   getKeepRanges,
@@ -45,6 +46,19 @@ describe("edit range math", () => {
     ];
     const manual: ManualCut[] = [{ id: 1, start: 2.5, end: 2.7 }];
     expect(getCutRanges(words, 3, manual)).toHaveLength(2);
+  });
+
+  it("maps compact edited time back across removed ranges", () => {
+    const cuts = [
+      { start: 1, end: 2 },
+      { start: 3, end: 4 },
+    ];
+    expect(editedToOriginal(0.5, cuts, 5)).toBeCloseTo(0.5);
+    expect(editedToOriginal(1, cuts, 5)).toBeCloseTo(2);
+    expect(editedToOriginal(2, cuts, 5)).toBeCloseTo(4);
+    expect(editedToOriginal(3, cuts, 5)).toBeCloseTo(5);
+    expect(editedToOriginal(0, [{ start: 0, end: 1 }], 5)).toBeCloseTo(1);
+    expect(editedToOriginal(4, [{ start: 4, end: 5 }], 5)).toBeCloseTo(3.999);
   });
 
   it("adjusts overlapping word bounds and their neighbor", () => {

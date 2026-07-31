@@ -75,7 +75,8 @@ Full source media and PCM stay native. IPC carries manifests, opaque references,
    - desktop verified GGML Base/Small model management and `whisper-cli`
    - desktop Parakeet v2/v3 through the bundled FluidAudio CLI
    - iOS WhisperKit 1.0.0 plus pinned FluidAudio Core ML transcription and model management
-   - iOS SpeakerKit/Pyannote speaker assignment
+   - optional per-project iOS SpeakerKit/Pyannote speaker assignment
+   - browser and iOS pipelines skip speaker-model loading when diarization is disabled
    - word timestamps, progress, cancellation, journals, and recovery
 
 7. **Complete Studio editor**
@@ -108,7 +109,7 @@ app-data/
   models/
 ```
 
-A project manifest stores schema version, revision, media reference, duration, model choice, words, manual cuts, scene boundaries, deleted-word visibility, and timestamps.
+A project manifest stores schema version, revision, media reference, duration, model choice, the speaker-diarization setting, words, manual cuts, scene boundaries, deleted-word visibility, and timestamps.
 
 ## Offline and model behavior
 

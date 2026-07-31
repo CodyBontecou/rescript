@@ -21,6 +21,7 @@ const manifest: ProjectManifest = {
   },
   duration: 3,
   model: "base",
+  speakerDiarizationEnabled: false,
   words: [
     { id: 1, text: "one", start: 0, end: 0.5, speaker: 0, deleted: false },
     { id: 2, text: "two", start: 0.6, end: 1.1, speaker: 0, deleted: false },
@@ -39,9 +40,20 @@ describe("Studio editor store", () => {
     useEditorStore.getState().loadProject(manifest);
   });
 
-  it("defaults an empty editor to Parakeet v2", () => {
+  it("uses lightweight defaults for a new editor", () => {
     useEditorStore.getState().reset();
     expect(useEditorStore.getState().model).toBe("parakeet-v2");
+    expect(useEditorStore.getState().speakerDiarizationEnabled).toBe(false);
+  });
+
+  it("persists the per-project speaker diarization setting", () => {
+    const store = useEditorStore.getState();
+    expect(store.speakerDiarizationEnabled).toBe(false);
+    store.setSpeakerDiarizationEnabled(true);
+    const changed = useEditorStore.getState();
+    expect(changed.speakerDiarizationEnabled).toBe(true);
+    expect(changed.manifest?.speakerDiarizationEnabled).toBe(true);
+    expect(changed.dirtyGeneration).toBe(1);
   });
 
   it("applies commands with undo and redo history", () => {

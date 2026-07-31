@@ -137,6 +137,43 @@ export function originalToEdited(t: number, cuts: TimeRange[]): number {
   return Math.max(0, t - removed);
 }
 
+/**
+ * Map a time on the compact edited timeline back to original media time.
+ * At a cut seam, prefer the first frame after the cut so seeking never lands
+ * inside content that has been removed.
+ */
+export function editedToOriginal(
+  t: number,
+  cuts: TimeRange[],
+  duration: number
+): number {
+  const keeps = getKeepRanges(cuts, duration);
+  if (keeps.length === 0) return 0;
+
+  const editedDuration = keeps.reduce(
+    (total, keep) => total + keep.end - keep.start,
+    0
+  );
+  const target = Math.max(0, Math.min(editedDuration, t));
+  const lastKeep = keeps[keeps.length - 1];
+  if (target >= editedDuration && lastKeep.end < duration - 1e-4) {
+    return Math.max(lastKeep.start, lastKeep.end - 0.001);
+  }
+
+  let cursor = 0;
+  for (let index = 0; index < keeps.length; index++) {
+    const keep = keeps[index];
+    const length = keep.end - keep.start;
+    const isLast = index === keeps.length - 1;
+    if (target < cursor + length || isLast) {
+      return Math.min(keep.end, keep.start + Math.max(0, target - cursor));
+    }
+    cursor += length;
+  }
+
+  return lastKeep.end;
+}
+
 /** Find the cut range containing time t, if any. */
 export function cutRangeAt(t: number, cuts: TimeRange[]): TimeRange | null {
   for (const cut of cuts) {

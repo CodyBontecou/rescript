@@ -5,6 +5,7 @@ import {
 } from "@rescript/core/commands";
 import { scheduleProjectAutosave } from "./autosave";
 import {
+  DEFAULT_SPEAKER_DIARIZATION_ENABLED,
   DEFAULT_TRANSCRIPTION_MODEL,
   type EditSnapshot,
   type EditorDocument,
@@ -25,6 +26,7 @@ interface EditorState {
   preparedMedia: PreparedMedia | null;
   playback: PlaybackSource | null;
   model: TranscriptionModel;
+  speakerDiarizationEnabled: boolean;
 
   duration: number;
   words: Word[];
@@ -64,6 +66,7 @@ interface EditorState {
   setPreparedMedia: (prepared: PreparedMedia | null) => void;
   setPlayback: (playback: PlaybackSource | null) => void;
   setModel: (model: TranscriptionModel) => void;
+  setSpeakerDiarizationEnabled: (enabled: boolean) => void;
   replaceTranscript: (words: readonly Word[], model: TranscriptionModel | "import") => void;
   deleteWords: (ids: readonly number[]) => void;
   restoreWords: (ids: readonly number[]) => void;
@@ -144,6 +147,7 @@ const emptyState = {
   preparedMedia: null,
   playback: null,
   model: DEFAULT_TRANSCRIPTION_MODEL,
+  speakerDiarizationEnabled: DEFAULT_SPEAKER_DIARIZATION_ENABLED,
   duration: 0,
   words: [] as Word[],
   manualCuts: [] as ProjectManifest["manualCuts"],
@@ -214,6 +218,7 @@ export const useEditorStore = create<EditorState>((set, get) => {
           manifest.model === "import"
             ? DEFAULT_TRANSCRIPTION_MODEL
             : manifest.model,
+        speakerDiarizationEnabled: manifest.speakerDiarizationEnabled,
         duration: manifest.duration,
         words: [...manifest.words],
         manualCuts: [...manifest.manualCuts],
@@ -241,6 +246,22 @@ export const useEditorStore = create<EditorState>((set, get) => {
     setPreparedMedia: (preparedMedia) => set({ preparedMedia }),
     setPlayback: (playback) => set({ playback }),
     setModel: (model) => set({ model }),
+    setSpeakerDiarizationEnabled: (speakerDiarizationEnabled) => {
+      const state = get();
+      if (
+        !state.manifest ||
+        state.speakerDiarizationEnabled === speakerDiarizationEnabled
+      ) {
+        set({ speakerDiarizationEnabled });
+        return;
+      }
+      set({
+        speakerDiarizationEnabled,
+        manifest: { ...state.manifest, speakerDiarizationEnabled },
+        ...dirtyPatch(state),
+      });
+      scheduleAutosave();
+    },
     replaceTranscript: (words, model) => {
       if (words.length === 0) return;
       const state = get();

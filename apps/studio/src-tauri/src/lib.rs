@@ -565,6 +565,7 @@ fn start_transcription(
                 project_store::ModelChoice::Import => unreachable!(),
             },
             language: request.language,
+            speaker_diarization_enabled: project.speaker_diarization_enabled,
         })
         .map_err(ios_transcription_error)
 }

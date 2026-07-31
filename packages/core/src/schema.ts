@@ -46,6 +46,8 @@ export type WhisperModel = "base" | "small";
 export type ParakeetModel = "parakeet-v2" | "parakeet-v3";
 export type TranscriptionModel = WhisperModel | ParakeetModel;
 export const DEFAULT_TRANSCRIPTION_MODEL: TranscriptionModel = "parakeet-v2";
+/** New projects skip the speaker model unless the user opts in. */
+export const DEFAULT_SPEAKER_DIARIZATION_ENABLED = false;
 export type ModelChoice = TranscriptionModel | "import";
 export type ModelAvailability = "missing" | "ready";
 
@@ -96,6 +98,7 @@ export interface ProjectManifest {
   media: ProjectMediaReference;
   duration: number;
   model: ModelChoice;
+  speakerDiarizationEnabled: boolean;
   words: Word[];
   manualCuts: ManualCut[];
   sceneBoundaries: SceneBoundary[];
@@ -249,6 +252,11 @@ export const ProjectManifestSchema = Schema.Struct({
   media: ProjectMediaReferenceSchema,
   duration: NonNegativeNumber,
   model: ModelChoiceSchema,
+  // Keep speaker detection enabled for manifests written before this setting
+  // existed so opening an older project does not silently change its behavior.
+  speakerDiarizationEnabled: Schema.optionalWith(Schema.Boolean, {
+    default: () => true,
+  }),
   words: Schema.Array(WordSchema),
   manualCuts: Schema.Array(ManualCutSchema),
   sceneBoundaries: Schema.Array(SceneBoundarySchema),

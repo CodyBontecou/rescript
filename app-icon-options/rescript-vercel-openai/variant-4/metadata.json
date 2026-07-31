@@ -1,0 +1,9 @@
+{
+  "variant": 4,
+  "concept": "Create a minimal waveform from five bold rectangular beats. Use one clean negative-space diagonal cut to imply both deleting audio and forward playback, with a subtle R silhouette.",
+  "prompt": "Design a production-ready 1024x1024 app icon for Rescript, an offline transcript-based audio and video editor where deleting words edits the media. Create a minimal waveform from five bold rectangular beats. Use one clean negative-space diagonal cut to imply both deleting audio and forward playback, with a subtle R silhouette.\n\nVisual language: inspired by Vercel's restraint and precision without copying its logo\u2014black and white, hard-edged Swiss modernism, clean mathematical geometry, pixel-crisp edges, balanced negative space, and instantly recognizable at 32px. Use a full-bleed square canvas with a pure near-black #050505 background and one solid warm-white #FAFAFA symbol centered, occupying roughly 58% of the canvas. The result should feel like a professionally drawn vector identity, not an illustration.\n\nStrict constraints: flat two-dimensional mark; no gradients, shadows, glow, lighting, texture, noise, depth, glass, 3D, outlines, border, container tile, or pre-rounded corners. Do not include the word Rescript, captions, tiny details, a mockup, a device, UI chrome, extra decorative marks, Vercel's exact triangle logo, or a watermark. Return exactly one icon on one square canvas.",
+  "provider": "openai-direct",
+  "model": "gpt-image-2",
+  "quality": "medium",
+  "response": {}
+}

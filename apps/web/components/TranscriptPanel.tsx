@@ -1,9 +1,20 @@
 "use client";
 
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, EyeOff, FileText, Pencil, RotateCcw, Scissors, WandSparkles, X } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  FileText,
+  Pencil,
+  RotateCcw,
+  Scissors,
+  Users,
+  WandSparkles,
+  X,
+} from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import { findFillerWordIds } from "@/lib/fillers";
+import { cutRangeAt, getCutRanges } from "@/lib/edits";
 import {
   isTranscriptFile,
   parseTranscriptFile,
@@ -44,18 +55,29 @@ function findActiveWordId(words: Word[], t: number): number {
 const WordSpan = memo(function WordSpan({
   word,
   active,
-  onClick,
+  focused,
+  onActivate,
 }: {
   word: Word;
   active: boolean;
-  onClick: (word: Word) => void;
+  focused: boolean;
+  onActivate: (word: Word, element: HTMLElement) => void;
 }) {
   // The trailing space lives inside the span so that selection and deletion
   // highlights are continuous across words instead of breaking at each gap.
   return (
     <span
+      role="button"
+      tabIndex={0}
       data-wid={word.id}
-      onClick={() => onClick(word)}
+      data-focused={focused ? "" : undefined}
+      aria-label={`${word.text}. ${word.deleted ? "Cut from video" : "Included in video"}`}
+      onClick={(event) => onActivate(word, event.currentTarget)}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onActivate(word, event.currentTarget);
+      }}
       className={`py-0.5 cursor-pointer transition-colors duration-75 ${word.deleted
         ? "word-deleted bg-red-50 text-red-400 line-through decoration-red-300"
         : active
@@ -69,11 +91,18 @@ const WordSpan = memo(function WordSpan({
 });
 
 interface SelectionInfo {
+  source: "focus" | "range";
   ids: number[];
   anyDeleted: boolean;
   anyKept: boolean;
   top: number;
   left: number;
+}
+
+function toolbarLeft(rect: DOMRect, containerRect: DOMRect): number {
+  const center = rect.left - containerRect.left + rect.width / 2;
+  const halfWidth = Math.min(132, Math.max(0, containerRect.width / 2 - 8));
+  return Math.min(Math.max(halfWidth, center), containerRect.width - halfWidth);
 }
 
 export default function TranscriptPanel() {
@@ -88,6 +117,12 @@ export default function TranscriptPanel() {
   const restoreWords = useEditorStore((s) => s.restoreWords);
   const correctWords = useEditorStore((s) => s.correctWords);
   const importWords = useEditorStore((s) => s.importWords);
+  const speakerDiarizationEnabled = useEditorStore(
+    (s) => s.speakerDiarizationEnabled
+  );
+  const setSpeakerDiarizationEnabled = useEditorStore(
+    (s) => s.setSpeakerDiarizationEnabled
+  );
   const playing = useEditorStore((s) => s.playing);
   const activeWordId = useEditorStore((s) => findActiveWordId(s.words, s.currentTime));
 
@@ -95,6 +130,11 @@ export default function TranscriptPanel() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
+  const selectionRef = useRef<SelectionInfo | null>(null);
+  const updateSelection = useCallback((next: SelectionInfo | null) => {
+    selectionRef.current = next;
+    setSelection(next);
+  }, []);
   const [correcting, setCorrecting] = useState<{
     ids: number[];
     top: number;
@@ -154,6 +194,29 @@ export default function TranscriptPanel() {
     setCurrentTime(word.start + 0.001);
   }, []);
 
+  const activateWord = useCallback((word: Word, element: HTMLElement) => {
+    seekToWord(word);
+
+    // Preserve drag/long-press range selection. A plain tap focuses one word
+    // and exposes the edit toolbar on touch layouts.
+    const nativeSelection = window.getSelection();
+    if (nativeSelection && !nativeSelection.isCollapsed) return;
+
+    nativeSelection?.removeAllRanges();
+    element.focus({ preventScroll: true });
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    if (!containerRect) return;
+    updateSelection({
+      source: "focus",
+      ids: [word.id],
+      anyDeleted: word.deleted,
+      anyKept: !word.deleted,
+      top: rect.bottom - containerRect.top + 6,
+      left: toolbarLeft(rect, containerRect),
+    });
+  }, [seekToWord, updateSelection]);
+
   // Track text selection over word spans, position the floating toolbar, and
   // paint our own (dimmed, gap-free) highlight by marking the selected spans.
   // The native ::selection highlight is made transparent over the words, and
@@ -171,13 +234,13 @@ export default function TranscriptPanel() {
       const sel = window.getSelection();
       if (!container || !sel || sel.isCollapsed || sel.rangeCount === 0) {
         clearMarks();
-        setSelection(null);
+        if (selectionRef.current?.source === "range") updateSelection(null);
         return;
       }
       const range = sel.getRangeAt(0);
       if (!container.contains(range.commonAncestorContainer)) {
         clearMarks();
-        setSelection(null);
+        if (selectionRef.current?.source === "range") updateSelection(null);
         return;
       }
       const wordMap = new Map(words.map((w) => [w.id, w]));
@@ -201,17 +264,18 @@ export default function TranscriptPanel() {
       }
       markedRef.current = marked;
       if (ids.length === 0) {
-        setSelection(null);
+        if (selectionRef.current?.source === "range") updateSelection(null);
         return;
       }
       const rect = range.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      setSelection({
+      updateSelection({
+        source: "range",
         ids,
         anyDeleted,
         anyKept,
-        top: rect.top - containerRect.top - 44,
-        left: Math.max(8, rect.left - containerRect.left + rect.width / 2),
+        top: rect.bottom - containerRect.top + 6,
+        left: toolbarLeft(rect, containerRect),
       });
     };
     document.addEventListener("selectionchange", handler);
@@ -219,21 +283,42 @@ export default function TranscriptPanel() {
       clearMarks();
       document.removeEventListener("selectionchange", handler);
     };
-  }, [words]);
+  }, [words, updateSelection]);
 
   const cutSelection = useCallback(() => {
     if (!selection) return;
     deleteWords(selection.ids);
+
+    // A word tap seeks into that word. Once it is cut, move the parked frame
+    // out of the newly removed range so the preview immediately matches the edit.
+    const state = useEditorStore.getState();
+    const cut = cutRangeAt(
+      state.currentTime,
+      getCutRanges(state.words, state.duration, state.manualCuts)
+    );
+    if (cut) {
+      const target = cut.end < state.duration - 0.001
+        ? cut.end + 0.001
+        : Math.max(0, cut.start - 0.001);
+      if (state.videoEl) state.videoEl.currentTime = target;
+      state.setCurrentTime(target);
+    }
+
     window.getSelection()?.removeAllRanges();
-    setSelection(null);
-  }, [selection, deleteWords]);
+    updateSelection(null);
+  }, [selection, deleteWords, updateSelection]);
 
   const restoreSelection = useCallback(() => {
     if (!selection) return;
     restoreWords(selection.ids);
     window.getSelection()?.removeAllRanges();
-    setSelection(null);
-  }, [selection, restoreWords]);
+    updateSelection(null);
+  }, [selection, restoreWords, updateSelection]);
+
+  const closeSelection = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    updateSelection(null);
+  }, [updateSelection]);
 
   const openCorrect = useCallback(() => {
     if (!selection) return;
@@ -250,9 +335,9 @@ export default function TranscriptPanel() {
       left: selection.left,
       containerWidth: containerRef.current?.clientWidth ?? 640,
     });
-    setSelection(null);
+    updateSelection(null);
     window.getSelection()?.removeAllRanges();
-  }, [selection, words]);
+  }, [selection, words, updateSelection]);
 
   const closeCorrect = useCallback(() => {
     correctingRef.current = false;
@@ -300,6 +385,10 @@ export default function TranscriptPanel() {
     el?.scrollIntoView({ block: "nearest" });
   }, [activeWordId, playing]);
 
+  const focusedWordIds = useMemo(
+    () => selection?.source === "focus" ? new Set(selection.ids) : null,
+    [selection]
+  );
   const busy = status === "preparing" || status === "transcribing";
 
   return (
@@ -327,6 +416,31 @@ export default function TranscriptPanel() {
             >
               <WandSparkles size={14} />
               <span className="hidden sm:inline">Remove fillers </span>({fillerIds.length})
+            </button>
+          )}
+          {status === "ready" && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={speakerDiarizationEnabled}
+              onClick={() =>
+                setSpeakerDiarizationEnabled(!speakerDiarizationEnabled)
+              }
+              title={
+                speakerDiarizationEnabled
+                  ? "Speaker detection is enabled for this project"
+                  : "Speaker detection is disabled; transcription uses one speaker"
+              }
+              className={`flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs transition ${
+                speakerDiarizationEnabled
+                  ? "bg-violet-50 text-violet-700 hover:bg-violet-100"
+                  : "text-zinc-500 hover:bg-zinc-100"
+              }`}
+            >
+              <Users size={14} />
+              <span className="hidden sm:inline">
+                Speakers {speakerDiarizationEnabled ? "on" : "off"}
+              </span>
             </button>
           )}
           {(status === "ready" || status === "error" || status === "transcribing") && (
@@ -422,7 +536,8 @@ export default function TranscriptPanel() {
                           key={w.id}
                           word={w}
                           active={w.id === activeWordId}
-                          onClick={seekToWord}
+                          focused={focusedWordIds?.has(w.id) ?? false}
+                          onActivate={activateWord}
                         />
                       ))}
                     </p>
@@ -434,13 +549,14 @@ export default function TranscriptPanel() {
 
           {selection && !correcting && (
             <div
-              className="absolute z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg shadow-zinc-900/10"
+              className="selection-toolbar absolute z-20 flex max-w-[calc(100%-16px)] -translate-x-1/2 items-center gap-0.5 overflow-x-auto rounded-xl border border-zinc-200 bg-white p-1 shadow-lg shadow-zinc-900/10"
               style={{ top: selection.top, left: selection.left }}
               onMouseDown={(e) => e.preventDefault()}
             >
               {selection.anyKept && (
                 <button
                   onClick={cutSelection}
+                  title="Cut the selected words and their video section"
                   className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-zinc-700 transition hover:bg-red-50 hover:text-red-600"
                 >
                   <Scissors size={13} />
@@ -463,6 +579,15 @@ export default function TranscriptPanel() {
                   Restore
                 </button>
               )}
+              <button
+                type="button"
+                onClick={closeSelection}
+                title="Close word actions"
+                aria-label="Close word actions"
+                className="ml-0.5 flex h-5 w-5 shrink-0 self-start items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+              >
+                <X size={11} />
+              </button>
             </div>
           )}
 
@@ -471,7 +596,7 @@ export default function TranscriptPanel() {
               ref={popoverRef}
               className="absolute z-20 w-80 max-w-[calc(100%-16px)] -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white p-3 shadow-xl shadow-zinc-900/10"
               style={{
-                top: Math.max(4, correcting.top - 56),
+                top: Math.max(4, correcting.top),
                 left: Math.min(
                   Math.max(168, correcting.left),
                   correcting.containerWidth - 168

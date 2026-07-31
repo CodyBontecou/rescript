@@ -29,6 +29,7 @@ function project(revision = 0): ProjectManifest {
     },
     duration: 2,
     model: "base",
+    speakerDiarizationEnabled: false,
     words: [],
     manualCuts: [],
     sceneBoundaries: [],
@@ -66,7 +67,10 @@ function pickerLayer(overrides: Partial<FilePickerService> = {}) {
 describe("project workflows", () => {
   it("treats a cancelled media picker as a successful no-op", async () => {
     const value = await Effect.runPromise(
-      chooseMediaAndCreateProject({ model: "base" }).pipe(
+      chooseMediaAndCreateProject({
+        model: "base",
+        speakerDiarizationEnabled: false,
+      }).pipe(
         Effect.provide(Layer.merge(repositoryLayer(), pickerLayer()))
       )
     );
@@ -75,9 +79,11 @@ describe("project workflows", () => {
 
   it("creates a project from an opaque selected-media handle", async () => {
     let receivedName = "";
+    let receivedDiarization = true;
     const repository = repositoryLayer({
       create: (input) => {
         receivedName = input.name;
+        receivedDiarization = input.speakerDiarizationEnabled;
         return Effect.succeed(project());
       },
     });
@@ -93,12 +99,16 @@ describe("project workflows", () => {
       ),
     });
     const value = await Effect.runPromise(
-      chooseMediaAndCreateProject({ model: "small" }).pipe(
+      chooseMediaAndCreateProject({
+        model: "small",
+        speakerDiarizationEnabled: false,
+      }).pipe(
         Effect.provide(Layer.merge(repository, picker))
       )
     );
     expect(Option.isSome(value)).toBe(true);
     expect(receivedName).toBe("clip.mov");
+    expect(receivedDiarization).toBe(false);
   });
 
   it("parses a selected transcript through the shared parser", async () => {
@@ -151,5 +161,6 @@ describe("project workflows", () => {
     );
     expect(updated.words).toHaveLength(1);
     expect(updated.showDeleted).toBe(true);
+    expect(updated.speakerDiarizationEnabled).toBe(false);
   });
 });

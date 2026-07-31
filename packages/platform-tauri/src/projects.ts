@@ -79,6 +79,7 @@ const service: ProjectRepositoryService = {
               mediaKind: input.media.mediaKind,
               duration: input.duration,
               model: input.model,
+              speakerDiarizationEnabled: input.speakerDiarizationEnabled,
               words: input.words ?? [],
             },
           })

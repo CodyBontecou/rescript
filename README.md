@@ -21,7 +21,7 @@ This repository now contains two clients:
 - Playback synchronized to the transcript and automatically skipping cut ranges
 - Native media preparation and export with progress, cancellation, journals, and recovery
 - Native offline transcription with Parakeet v2 (the default), Parakeet v3, and Whisper Base/Small
-- On-device iOS speaker diarization with Argmax SpeakerKit/Pyannote
+- Optional per-project speaker diarization with Pyannote (browser) and Argmax SpeakerKit/Pyannote (iOS)
 - Responsive macOS and iPhone editor using the same React and Effect workflows
 - Reduced waveform and word data over IPC; source media and PCM remain native
 
@@ -126,13 +126,13 @@ apps/studio/src-tauri/gen/apple/build/arm64-sim/Rescript.app
 
 - AVFoundation prepares media and exports keep ranges without full media crossing IPC.
 - [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) 1.0.0 handles Whisper; pinned [FluidAudio](https://github.com/FluidInference/FluidAudio) handles Parakeet v2/v3. Both produce word timestamps.
-- SpeakerKit performs Pyannote diarization and assigns speaker IDs. Speaker attribution is best-effort and skipped for prepared WAVs over 120 MiB to control mobile memory use.
+- SpeakerKit performs Pyannote diarization and assigns speaker IDs when **Identify speakers** is enabled for the project. Speaker attribution is best-effort and skipped for prepared WAVs over 120 MiB to control mobile memory use.
 
 Missing transcription and speaker models download on first use, are cached under app-controlled storage, and can be used offline afterward. On macOS, compatible pre-existing Parakeet caches can be reused read-only. Media and transcript content are never uploaded.
 
 ## Project and security model
 
-Projects live under the app data directory as `projects/<uuid>/` and contain an immutable copied source, derived native assets, and a schema-versioned `manifest.json`.
+Projects live under the app data directory as `projects/<uuid>/` and contain an immutable copied source, derived native assets, and a schema-versioned `manifest.json`. New projects leave speaker diarization off by default; it can be enabled before import or changed per project before retranscribing. Existing projects retain the previous enabled behavior.
 
 - Saves use expected revisions, temporary files, backups, and atomic replacement.
 - Timings and IDs are finite, ordered, unique, and constrained to media duration.
@@ -142,7 +142,7 @@ Projects live under the app data directory as `projects/<uuid>/` and contain an 
 
 ## Web app
 
-The browser app remains a static, offline-capable Next.js client using Parakeet.js (v2 is the default), transformers.js for optional Whisper models, pyannote ONNX, IndexedDB, and ffmpeg.wasm.
+The browser app remains a static, offline-capable Next.js client using Parakeet.js (v2 is the default), transformers.js for optional Whisper models, optional per-project pyannote ONNX diarization, IndexedDB, and ffmpeg.wasm.
 
 ```bash
 npm run dev:web

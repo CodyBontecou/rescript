@@ -58,3 +58,7 @@ next-env.d.ts
 /public/coi-serviceworker.js
 /apps/web/public/vendor/
 /apps/web/public/coi-serviceworker.js
+# App Store draft image output
+app-store-output/
+# Node dependencies for the self-contained App Store image tool
+scripts/app-store-images/node_modules/

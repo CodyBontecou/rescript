@@ -20,6 +20,7 @@ function manifest() {
     },
     duration: 12,
     model: "base" as const,
+    speakerDiarizationEnabled: false,
     words: [
       {
         id: 0,
@@ -47,6 +48,13 @@ describe("project manifest schema", () => {
     const decoded = await Effect.runPromise(decodeProjectManifest(manifest()));
     expect(decoded.id).toBe("project-1");
     expect(decoded.schemaVersion).toBe(1);
+    expect(decoded.speakerDiarizationEnabled).toBe(false);
+  });
+
+  it("keeps diarization enabled for legacy manifests", async () => {
+    const { speakerDiarizationEnabled: _, ...legacy } = manifest();
+    const decoded = await Effect.runPromise(decodeProjectManifest(legacy));
+    expect(decoded.speakerDiarizationEnabled).toBe(true);
   });
 
   it.each(["parakeet-v2", "parakeet-v3"] as const)(

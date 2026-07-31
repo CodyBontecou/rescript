@@ -730,7 +730,7 @@ export default function Timeline() {
   const showHandles = pps >= HANDLE_VIS_PPS;
 
   return (
-    <footer className="flex h-32 shrink-0 flex-col border-t border-zinc-200 bg-white sm:h-52">
+    <footer className="timeline-dock flex h-32 shrink-0 flex-col border-t border-zinc-200 bg-white sm:h-52">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-zinc-100 px-3">
         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
           Timeline
@@ -749,7 +749,7 @@ export default function Timeline() {
                 ? "Split clip at playhead (S)"
                 : "Move the playhead onto a kept region to split"
             }
-            className={`group relative flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all duration-200 ${
+            className={`group relative hidden h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-all duration-200 sm:flex ${
               ready && splitOk
                 ? "bg-zinc-900 text-white shadow-sm shadow-zinc-900/10 hover:bg-zinc-800 active:scale-[0.97]"
                 : "cursor-not-allowed bg-zinc-100 text-zinc-400"
@@ -775,6 +775,27 @@ export default function Timeline() {
         </div>
 
         <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            disabled={!ready || !splitOk}
+            onClick={doSplit}
+            title={
+              splitOk
+                ? "Split clip at playhead (S)"
+                : "Move the playhead onto a kept region to split"
+            }
+            aria-label="Split clip at playhead"
+            className={`group relative flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 transition-all duration-200 hover:bg-zinc-100 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent sm:hidden ${
+              splitFlash ? "tl-split-flash" : ""
+            }`}
+          >
+            <Scissors
+              size={14}
+              className={`transition-transform duration-300 ${
+                splitFlash ? "rotate-[-18deg] scale-110" : ""
+              }`}
+            />
+          </button>
           <button
             type="button"
             disabled={!ready}

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Trash2,
   Type,
+  Users,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import GitHubLink from "./GitHubLink";
@@ -166,6 +167,12 @@ export default function UploadScreen({
   const ready = isolation === "ready";
   const model = useEditorStore((s) => s.model);
   const pendingTranscript = useEditorStore((s) => s.pendingTranscript);
+  const speakerDiarizationEnabled = useEditorStore(
+    (s) => s.speakerDiarizationEnabled
+  );
+  const setSpeakerDiarizationEnabled = useEditorStore(
+    (s) => s.setSpeakerDiarizationEnabled
+  );
   const openProject = useEditorStore((s) => s.openProject);
   const removeProject = useEditorStore((s) => s.removeProject);
 
@@ -266,14 +273,36 @@ export default function UploadScreen({
             />
             <p className="ml-2 text-[15px] font-medium text-zinc-800">Rescript</p>
           </div>
-          <ModelSelector groupLabel="Transcript source">
-            <ModelOption id="parakeet-v2" />
-            <ModelOption id="parakeet-v3" />
-            <ModelOption id="base" />
-            <ModelOption id="small" />
-            <ModelOptionSeparator />
-            <ImportTranscriptOption />
-          </ModelSelector>
+          <div className="flex items-center gap-2">
+            <label
+              title="Detect and label multiple speakers during transcription"
+              className={`flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 ${
+                model === "import"
+                  ? "cursor-not-allowed opacity-40"
+                  : "cursor-pointer hover:bg-zinc-50"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={speakerDiarizationEnabled}
+                disabled={model === "import"}
+                onChange={(event) =>
+                  setSpeakerDiarizationEnabled(event.target.checked)
+                }
+                className="accent-violet-600"
+              />
+              <Users size={14} />
+              <span className="hidden sm:inline">Identify speakers</span>
+            </label>
+            <ModelSelector groupLabel="Transcript source">
+              <ModelOption id="parakeet-v2" />
+              <ModelOption id="parakeet-v3" />
+              <ModelOption id="base" />
+              <ModelOption id="small" />
+              <ModelOptionSeparator />
+              <ImportTranscriptOption />
+            </ModelSelector>
+          </div>
         </div>
         <div
           role="button"

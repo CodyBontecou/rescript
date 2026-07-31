@@ -1,12 +1,5 @@
 import type { ProjectSummary, TranscriptionModel } from "@rescript/core";
-import {
-  AudioLines,
-  FolderOpen,
-  LockKeyhole,
-  MonitorSmartphone,
-  Scissors,
-  Trash2,
-} from "lucide-react";
+import { FolderOpen, Trash2 } from "lucide-react";
 
 interface PlatformInfo {
   os: string;
@@ -14,13 +7,33 @@ interface PlatformInfo {
   mobile: boolean;
 }
 
+const waveformHeights = [
+  18, 34, 22, 46, 31, 58, 40, 70, 49, 28, 55, 38, 64, 33, 21, 45, 61,
+  37, 52, 73, 44, 29, 57, 36, 67, 48, 25, 41, 59, 32, 50, 27,
+];
+
+function platformLabel(platform: PlatformInfo | null): string {
+  if (!platform) return "Connecting…";
+
+  const os =
+    platform.os.toLowerCase() === "macos"
+      ? "macOS"
+      : platform.os.toLowerCase() === "ios"
+        ? "iOS"
+        : platform.os;
+
+  return `${os} · ${platform.arch}${platform.mobile ? " · mobile" : ""}`;
+}
+
 export default function HomeScreen({
   platform,
   projects,
   model,
+  speakerDiarizationEnabled,
   busy,
   error,
   onModelChange,
+  onSpeakerDiarizationChange,
   onChooseMedia,
   onOpenProject,
   onRemoveProject,
@@ -28,103 +41,169 @@ export default function HomeScreen({
   platform: PlatformInfo | null;
   projects: readonly ProjectSummary[];
   model: TranscriptionModel;
+  speakerDiarizationEnabled: boolean;
   busy: boolean;
   error: string | null;
   onModelChange: (model: TranscriptionModel) => void;
+  onSpeakerDiarizationChange: (enabled: boolean) => void;
   onChooseMedia: () => void;
   onOpenProject: (project: ProjectSummary) => void;
   onRemoveProject: (project: ProjectSummary) => void;
 }) {
   return (
-    <main className="shell">
-      <header className="titlebar" data-tauri-drag-region>
-        <div className="brand" data-tauri-drag-region>
-          <span className="brand-mark">R</span>
+    <main className="home-shell">
+      <header className="home-titlebar" data-tauri-drag-region>
+        <div className="home-brand" data-tauri-drag-region>
+          <img src="/rescript-logo.png" alt="" />
           <span>Rescript</span>
         </div>
-        <span className="platform-pill">
-          {platform
-            ? `${platform.os} · ${platform.arch}${platform.mobile ? " · mobile" : ""}`
-            : "Connecting…"}
+        <span className="home-platform" aria-live="polite">
+          {platformLabel(platform)}
         </span>
       </header>
 
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">PRIVATE, ON-DEVICE EDITING</p>
-          <h1>Edit the words.<br />Rescript the video.</h1>
-          <p className="lede">
-            Import audio or video, transcribe it locally, and cut the recording by editing its transcript. Your source media stays on this device.
+      <section className="home-opening" aria-labelledby="home-title">
+        <div className="home-opening-copy">
+          <h1 id="home-title">Edit the recording by editing the words.</h1>
+          <p>
+            Import audio or video, transcribe it on this device, and cut the
+            media by changing its transcript. Nothing is uploaded.
           </p>
-          <div className="editor-actions">
-            <button
-              className="primary-action"
-              type="button"
-              onClick={onChooseMedia}
-              disabled={busy}
-            >
-              <FolderOpen size={19} />
-              {busy ? "Opening project…" : "Choose media"}
-            </button>
+        </div>
+
+        <div className="home-start">
+          <div>
+            <h2>Start a project</h2>
+            <p>Choose a file and Rescript will prepare a private local copy.</p>
+          </div>
+
+          <button
+            className="home-primary-action"
+            type="button"
+            onClick={onChooseMedia}
+            disabled={busy}
+          >
+            <FolderOpen size={17} aria-hidden="true" />
+            {busy ? "Opening project…" : "Choose audio or video"}
+          </button>
+
+          <label className="home-model-field">
+            <span>Transcription model</span>
             <select
-              className="model-choice"
               value={model}
               onChange={(event) =>
                 onModelChange(event.target.value as TranscriptionModel)
               }
               disabled={busy}
-              aria-label="Default offline transcription model"
             >
-              <option value="parakeet-v2">Parakeet v2 · English · Default · ~465 MB</option>
-              <option value="parakeet-v3">Parakeet v3 · Multilingual · ~465 MB</option>
+              <option value="parakeet-v2">Parakeet v2 · English · Default · 465 MB</option>
+              <option value="parakeet-v3">Parakeet v3 · Multilingual · 465 MB</option>
               <option value="base">Whisper Base · 148 MB</option>
               <option value="small">Whisper Small · 488 MB</option>
             </select>
-          </div>
-          {error ? <p className="error">{error}</p> : null}
-        </div>
+          </label>
 
-        <div className="workflow-card" aria-label="Rescript workflow">
-          <div className="waveform" aria-hidden="true">
-            {[13, 30, 22, 47, 34, 62, 38, 72, 49, 26, 56, 41, 68, 31, 18, 42].map((height, index) => (
-              <span key={index} style={{ height }} />
-            ))}
-          </div>
-          <div className="transcript-preview">
-            <span>We should keep the opening,</span>
-            <del> um, maybe trim this part, </del>
-            <span>and land on the conclusion.</span>
-          </div>
-          <div className="clip-row">
-            <span>Intro</span><span className="cut">Removed</span><span>Conclusion</span>
-          </div>
+          <label className="home-speaker-field">
+            <input
+              type="checkbox"
+              checked={speakerDiarizationEnabled}
+              onChange={(event) =>
+                onSpeakerDiarizationChange(event.target.checked)
+              }
+              disabled={busy}
+            />
+            <span>
+              <strong>Identify speakers</strong>
+              <small>Detect and label multiple voices during transcription.</small>
+            </span>
+          </label>
+
+          <p className="home-start-note">
+            Models download once, then remain available offline.
+          </p>
+          {error ? (
+            <p className="home-error" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
       </section>
 
-      {projects.length > 0 ? (
-        <section className="recent-projects" aria-label="Recent projects">
-          <div className="section-heading">
-            <p className="eyebrow">RECENT PROJECTS</p>
-            <span>{projects.length} stored locally</span>
+      <figure
+        className="home-workflow"
+        aria-labelledby="workflow-title"
+        aria-describedby="workflow-caption"
+      >
+        <div className="home-workflow-heading">
+          <h2 id="workflow-title">The timeline follows the transcript.</h2>
+          <p id="workflow-caption">
+            Delete a phrase and the matching media range disappears from the
+            final cut.
+          </p>
+        </div>
+
+        <div className="home-workflow-demo">
+          <div className="home-transcript-sample">
+            <span className="home-workflow-label">Transcript</span>
+            <p>
+              We should keep the opening,
+              <del> um, maybe trim this part, </del>
+              and land on the conclusion.
+            </p>
           </div>
-          <div className="recent-row">
+
+          <div className="home-timeline-sample">
+            <span className="home-workflow-label">Timeline</span>
+            <div className="home-waveform" aria-hidden="true">
+              {waveformHeights.map((height, index) => (
+                <span
+                  key={index}
+                  className={index >= 12 && index <= 17 ? "is-cut" : undefined}
+                  style={{ height: `${height}%` }}
+                />
+              ))}
+            </div>
+            <div className="home-clip-row">
+              <span>Opening</span>
+              <span className="is-cut">Removed</span>
+              <span>Conclusion</span>
+            </div>
+          </div>
+        </div>
+      </figure>
+
+      {projects.length > 0 ? (
+        <section className="home-recents" aria-labelledby="recent-projects-title">
+          <div className="home-section-heading">
+            <h2 id="recent-projects-title">Recent projects</h2>
+            <p>{projects.length} stored locally</p>
+          </div>
+          <div className="home-project-list">
             {projects.slice(0, 8).map((project) => (
-              <div key={project.id} className="project-card-wrap">
-                <button type="button" className="project-card" onClick={() => onOpenProject(project)}>
-                  <span>{project.mediaKind === "audio" ? "Audio" : "Video"}</span>
+              <div key={project.id} className="home-project-row">
+                <button
+                  type="button"
+                  className="home-project-open"
+                  onClick={() => onOpenProject(project)}
+                  disabled={busy}
+                >
+                  <span className="home-project-kind">
+                    {project.mediaKind === "audio" ? "Audio" : "Video"}
+                  </span>
                   <strong>{project.name}</strong>
-                  <small>
+                  <span className="home-project-meta">
                     {project.duration > 0 ? `${Math.round(project.duration)} sec · ` : ""}
                     {new Date(project.updatedAt).toLocaleDateString()}
-                  </small>
+                  </span>
                 </button>
                 <button
                   type="button"
-                  className="project-delete"
+                  className="home-project-delete"
                   onClick={() => onRemoveProject(project)}
+                  disabled={busy}
                   aria-label={`Delete ${project.name}`}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={15} aria-hidden="true" />
                 </button>
               </div>
             ))}
@@ -132,11 +211,19 @@ export default function HomeScreen({
         </section>
       ) : null}
 
-      <section className="feature-grid">
-        <article><Scissors size={20} /><div><h2>Transcript editing</h2><p>Cut, correct, split, trim, and assign speakers.</p></div></article>
-        <article><AudioLines size={20} /><div><h2>Native media jobs</h2><p>Decoding, transcription, and export stay outside the webview.</p></div></article>
-        <article><LockKeyhole size={20} /><div><h2>Offline by default</h2><p>Projects and models remain in app-controlled storage.</p></div></article>
-        <article><MonitorSmartphone size={20} /><div><h2>Mac and iPhone</h2><p>One shared editor with native platform boundaries.</p></div></article>
+      <section className="home-principles" aria-label="Rescript principles">
+        <article>
+          <h2>Private by design</h2>
+          <p>Source media, transcripts, and edits stay on this device.</p>
+        </article>
+        <article>
+          <h2>Native media processing</h2>
+          <p>Preparation, transcription, playback, and export run locally.</p>
+        </article>
+        <article>
+          <h2>Built for real edits</h2>
+          <p>Cut words, adjust timing, assign speakers, and export the result.</p>
+        </article>
       </section>
     </main>
   );

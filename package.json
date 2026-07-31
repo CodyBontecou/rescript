@@ -18,7 +18,10 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
-    "postinstall": "npm run assets --workspace @rescript/web"
+    "postinstall": "npm run assets --workspace @rescript/web",
+    "appstore:images:plan": "npm --prefix scripts/app-store-images run plan",
+    "appstore:images:store-key": "npm --prefix scripts/app-store-images run store-key",
+    "appstore:images:generate": "npm --prefix scripts/app-store-images run generate"
   },
   "devDependencies": {
     "tsx": "^4.20.6",

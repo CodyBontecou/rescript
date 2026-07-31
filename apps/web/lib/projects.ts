@@ -29,6 +29,8 @@ export interface ProjectMeta {
 export interface ProjectRecord extends ProjectMeta {
   words: Word[];
   showDeleted: boolean;
+  /** Optional at runtime for records created before this setting existed. */
+  speakerDiarizationEnabled?: boolean;
   /** Blade/trim cuts not owned by deleted words (optional for older saves). */
   manualCuts?: ManualCut[];
   /** Scene split points in original media time (optional for older saves). */
@@ -129,6 +131,8 @@ export async function putProject(input: ProjectWrite): Promise<string> {
       : DEFAULT_TRANSCRIPTION_MODEL,
     words: input.words,
     showDeleted: input.showDeleted,
+    speakerDiarizationEnabled:
+      input.speakerDiarizationEnabled ?? false,
     manualCuts: input.manualCuts ?? [],
     sceneBoundaries: input.sceneBoundaries ?? [],
     media: input.media,

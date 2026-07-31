@@ -76,8 +76,9 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 }
 
 async function validateManifest(value: unknown): Promise<ProjectManifest> {
-  await Effect.runPromise(decodeProjectManifest(value));
-  return value as ProjectManifest;
+  return (await Effect.runPromise(
+    decodeProjectManifest(value)
+  )) as ProjectManifest;
 }
 
 function summaryOf(manifest: ProjectManifest): ProjectSummary {
@@ -160,6 +161,7 @@ const service: ProjectRepositoryService = {
           },
           duration: input.duration ?? 0,
           model: input.model,
+          speakerDiarizationEnabled: input.speakerDiarizationEnabled,
           words: [...(input.words ?? [])],
           manualCuts: [],
           sceneBoundaries: [],

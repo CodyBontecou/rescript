@@ -13,7 +13,10 @@ import {
   applyEditorCommand,
   type EditorCommand,
 } from "@rescript/core/commands";
-import type { EditorDocument } from "@rescript/core";
+import {
+  DEFAULT_SPEAKER_DIARIZATION_ENABLED,
+  type EditorDocument,
+} from "@rescript/core";
 import {
   DEFAULT_TRANSCRIPTION_MODEL,
   isModelChoice,
@@ -46,6 +49,8 @@ interface EditorState {
   audio: Float32Array | null;
   /** Transcript source selected on the upload screen (local ASR or import). */
   model: ModelChoice;
+  /** Run the optional speaker model after transcription for this project. */
+  speakerDiarizationEnabled: boolean;
   /**
    * Caption file parsed on the upload screen when source is "import".
    * Cleared when switching back to a transcription model or after media loads.
@@ -100,6 +105,7 @@ interface EditorState {
   /** Delete a saved project; if it is the active one, resets to the home screen. */
   removeProject: (id: string) => Promise<void>;
   setModel: (m: ModelChoice) => void;
+  setSpeakerDiarizationEnabled: (enabled: boolean) => void;
   setPendingTranscript: (t: PendingTranscript | null) => void;
   setDuration: (d: number) => void;
   setAudio: (a: Float32Array) => void;
@@ -264,6 +270,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   duration: 0,
   audio: null,
   model: DEFAULT_TRANSCRIPTION_MODEL,
+  speakerDiarizationEnabled: DEFAULT_SPEAKER_DIARIZATION_ENABLED,
   pendingTranscript: null,
   projectId: null,
   skipTranscription: false,
@@ -351,6 +358,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       model: isModelChoice(record.model)
         ? record.model
         : DEFAULT_TRANSCRIPTION_MODEL,
+      // Records created before this setting always ran speaker detection.
+      speakerDiarizationEnabled: record.speakerDiarizationEnabled ?? true,
       projectId: record.id,
       skipTranscription: true,
       pendingTranscript: null,
@@ -389,6 +398,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     } else {
       set({ model });
     }
+  },
+  setSpeakerDiarizationEnabled: (speakerDiarizationEnabled) => {
+    if (get().speakerDiarizationEnabled === speakerDiarizationEnabled) return;
+    set({ speakerDiarizationEnabled });
+    if (get().status === "ready") bumpAutosave();
   },
   setPendingTranscript: (pendingTranscript) => set({ pendingTranscript }),
   setDuration: (duration) => {
@@ -560,6 +574,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       duration: 0,
       audio: null,
       model: loadModelPreference(),
+      speakerDiarizationEnabled: DEFAULT_SPEAKER_DIARIZATION_ENABLED,
       pendingTranscript: null,
       projectId: null,
       skipTranscription: false,

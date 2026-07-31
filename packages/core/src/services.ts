@@ -78,6 +78,7 @@ export interface CreateProjectInput {
   readonly media: ImportedMedia;
   readonly duration?: number;
   readonly model: ModelChoice;
+  readonly speakerDiarizationEnabled: boolean;
   readonly words?: readonly Word[];
 }
 

@@ -1104,6 +1104,7 @@ mod tests {
                 media_kind: MediaKind::Audio,
                 duration: Some(2.0),
                 model: ModelChoice::Base,
+                speaker_diarization_enabled: false,
                 words: Vec::new(),
             })
             .unwrap();

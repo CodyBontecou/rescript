@@ -29,11 +29,10 @@ async function saveUntilCurrent(): Promise<void> {
 
     const projectId = manifest.id;
     const generation = state.dirtyGeneration;
-    const snapshot = withEditorDocument(
-      manifest,
-      currentDocument(),
-      state.showDeleted
-    );
+    const snapshot = {
+      ...withEditorDocument(manifest, currentDocument(), state.showDeleted),
+      speakerDiarizationEnabled: state.speakerDiarizationEnabled,
+    };
     state.setSaveState("saving");
 
     try {
